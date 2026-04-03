@@ -1,0 +1,6 @@
+/venv
+/test
+.vscode
+/snapshots
+.env
+yolov8x.pt
