@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>CAMNET</title>
+    <title>CAMNET | Production Build</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
         href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap"
@@ -167,7 +167,8 @@
             width: 6px;
             height: 6px;
             border-radius: 50%;
-            background: var(--muted);
+            background: var(--border2);
+            transition: 0.3s;
         }
 
         .header-tab.active .tab-dot {
@@ -178,7 +179,7 @@
         .tab-dot.alert-dot {
             background: var(--red) !important;
             box-shadow: 0 0 8px var(--red-glow) !important;
-            animation: blink 1s step-end infinite
+            animation: blink 1s step-end infinite;
         }
 
         @keyframes blink {
@@ -222,6 +223,12 @@
             color: var(--red)
         }
 
+        .badge-error {
+            background: var(--amber-dim);
+            border: 1px solid var(--amber);
+            color: var(--amber)
+        }
+
         .timestamp {
             font-family: var(--mono);
             font-size: .65rem;
@@ -236,6 +243,29 @@
             grid-template-columns: 240px 1fr 320px;
             grid-template-rows: 1fr;
             overflow: hidden;
+            position: relative;
+        }
+
+        /* Module Placeholder Container */
+        #placeholder-workspace {
+            display: none;
+            grid-column: 1 / -1;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            background: var(--bg);
+            z-index: 50;
+            color: var(--text);
+            font-family: var(--mono);
+            text-align: center;
+        }
+
+        #placeholder-workspace h3 {
+            color: var(--white);
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
         }
 
         /* ─── LEFT SIDEBAR ─── */
@@ -314,7 +344,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 10px 10px;
+            padding: 10px;
             border-radius: 6px;
             cursor: pointer;
             transition: .15s;
@@ -796,7 +826,7 @@
             margin-top: 6px
         }
 
-        /* Events / Alerts panel */
+        /* Events panel */
         .event-entry {
             display: flex;
             gap: 10px;
@@ -1056,7 +1086,6 @@
             color: var(--cyan)
         }
 
-        /* Modal right panel */
         .modal-right {
             border-left: 1px solid var(--border2);
             display: flex;
@@ -1253,18 +1282,21 @@
 
 <body>
 
-    <!-- HEADER -->
     <header>
         <div class="logo">
             <div class="logo-icon"></div>
             CAMNET
         </div>
         <div class="header-tabs">
-            <div class="header-tab active"><span class="tab-dot active"></span>Live Feeds</div>
-            <div class="header-tab"><span class="tab-dot"></span>Analytics</div>
-            <div class="header-tab"><span class="tab-dot alert-dot" id="alert-tab-dot"></span>Alerts <span
-                    id="alert-tab-count" style="font-size:.6rem;color:var(--red);margin-left:4px"></span></div>
-            <div class="header-tab"><span class="tab-dot"></span>Config</div>
+            <div class="header-tab active" onclick="switchMainTab('live', this)"><span
+                    class="tab-dot active"></span>Live Feeds</div>
+            <div class="header-tab" onclick="switchMainTab('analytics', this)"><span class="tab-dot"></span>Analytics
+            </div>
+            <div class="header-tab" onclick="switchMainTab('alerts', this)">
+                <span class="tab-dot" id="alert-tab-dot"></span>Alerts
+                <span id="alert-tab-count" style="font-size:.6rem;color:var(--red);margin-left:4px"></span>
+            </div>
+            <div class="header-tab" onclick="switchMainTab('config', this)"><span class="tab-dot"></span>Config</div>
         </div>
         <div class="header-right">
             <span class="sys-badge badge-online" id="live-count">— / — ONLINE</span>
@@ -1273,28 +1305,23 @@
     </header>
 
     <main>
-        <!-- LEFT SIDEBAR -->
-        <div class="left-sidebar">
+        <div id="placeholder-workspace">
+            <h3 id="ph-title">MODULE</h3>
+            <p style="opacity: 0.6;">This module is under construction or currently offline.</p>
+        </div>
+
+        <div class="left-sidebar main-view-element">
             <div class="sidebar-section">
                 <div class="sidebar-label">System</div>
-                <div class="sys-stat">
-                    <span class="key">Active Nodes</span>
-                    <span class="val" id="ss-active">—</span>
+                <div class="sys-stat"><span class="key">Active Nodes</span><span class="val" id="ss-active">—</span>
                 </div>
-                <div class="sys-stat">
-                    <span class="key">Total Detections</span>
-                    <span class="val" id="ss-detections">—</span>
+                <div class="sys-stat"><span class="key">Total Detections</span><span class="val"
+                        id="ss-detections">—</span></div>
+                <div class="sys-stat"><span class="key">Active Zones</span><span class="val" id="ss-zones">—</span>
                 </div>
-                <div class="sys-stat">
-                    <span class="key">Active Zones</span>
-                    <span class="val" id="ss-zones">—</span>
-                </div>
-                <div class="sys-stat">
-                    <span class="key">Open Alerts</span>
-                    <span class="val danger" id="ss-alerts">—</span>
-                </div>
+                <div class="sys-stat"><span class="key">Open Alerts</span><span class="val danger"
+                        id="ss-alerts">—</span></div>
             </div>
-
             <div class="sidebar-section"
                 style="flex:1;overflow:hidden;display:flex;flex-direction:column;padding-bottom:0">
                 <div class="sidebar-label">Camera Nodes</div>
@@ -1302,8 +1329,7 @@
             </div>
         </div>
 
-        <!-- CENTER FEEDS -->
-        <div class="feeds-area">
+        <div class="feeds-area main-view-element">
             <div class="feeds-toolbar">
                 <span class="toolbar-label">Live Grid</span>
                 <div class="toolbar-sep"></div>
@@ -1319,16 +1345,15 @@
             </div>
             <div class="feeds-scroll">
                 <div class="feeds-grid" id="feeds-grid">
-                    <p
+                    <div id="loading-overlay"
                         style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text);font-family:var(--mono);font-size:.8rem">
                         Connecting to cluster...
-                    </p>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- RIGHT SIDEBAR -->
-        <div class="right-sidebar">
+        <div class="right-sidebar main-view-element">
             <div class="rs-tabs">
                 <div class="rs-tab active" onclick="switchRsTab('stats',this)">Stats</div>
                 <div class="rs-tab" onclick="switchRsTab('alerts',this)">
@@ -1336,8 +1361,6 @@
                 </div>
             </div>
             <div class="rs-content">
-
-                <!-- STATS TAB -->
                 <div class="rs-panel" id="rs-stats">
                     <div class="big-stat-grid" id="big-stats">
                         <div class="big-stat">
@@ -1365,22 +1388,17 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- ALERTS TAB -->
                 <div class="rs-panel" id="rs-alerts" style="display:none;padding:0">
                     <div id="events-list">
                         <div class="no-events">No active infractions</div>
                     </div>
                 </div>
-
             </div>
         </div>
     </main>
 
-    <!-- MODAL -->
     <div class="modal-backdrop" id="cam-modal" onclick="handleBackdropClick(event)">
         <div class="modal-box" onclick="event.stopPropagation()">
-
             <div class="modal-main">
                 <div class="modal-topbar">
                     <span class="dot" id="modal-dot"
@@ -1388,7 +1406,6 @@
                     <span class="modal-cam-id" id="modal-cam-id">—</span>
                     <button class="modal-close" onclick="closeModal()">✕</button>
                 </div>
-
                 <div class="modal-feed-wrap">
                     <img id="modal-img" src="" alt="Feed" />
                     <canvas id="zone-canvas"></canvas>
@@ -1397,7 +1414,6 @@
                         <span>Click to place vertices · 3+ points to save</span>
                     </div>
                 </div>
-
                 <div class="modal-bottombar">
                     <div class="modal-metric"><span class="mm-k">FPS</span><span class="mm-v hi" id="m-fps">—</span>
                     </div>
@@ -1409,7 +1425,6 @@
                             class="mm-v" style="color:var(--cyan)">ACTIVE</span></div>
                 </div>
             </div>
-
             <div class="modal-right">
                 <div class="modal-section">
                     <div class="ms-title">Zone Configuration</div>
@@ -1425,7 +1440,6 @@
                             Zone</button>
                     </div>
                 </div>
-
                 <div class="modal-section">
                     <div class="ms-title">Node Telemetry</div>
                     <div id="modal-hist">
@@ -1434,12 +1448,12 @@
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 
     <script>
         const API = "";
+        let isApiFailing = false;
 
         /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
            STATE
@@ -1450,10 +1464,7 @@
         let sortMode = 'default';
         let alertCount = 0;
 
-        // Zone state per camera: { [camId]: [[x,y],...] }
         const savedZones = JSON.parse(localStorage.getItem('camnet_zones') || '{}');
-
-        // Drawing state
         let isDrawMode = false;
         let draftPts = [];
 
@@ -1466,14 +1477,38 @@
            CLOCK
         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
         function updateClock() {
-            document.getElementById('sys-clock').textContent =
-                new Date().toLocaleTimeString('en-GB', { hour12: false });
+            document.getElementById('sys-clock').textContent = new Date().toLocaleTimeString('en-GB', { hour12: false });
         }
         setInterval(updateClock, 1000); updateClock();
 
         /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-           TAB UI
+           TAB UI & VIEW SWITCHING
         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        function switchMainTab(tabName, el) {
+            // Update Active Header Styles
+            document.querySelectorAll('.header-tab').forEach(t => {
+                t.classList.remove('active');
+                const dot = t.querySelector('.tab-dot');
+                if (dot && !dot.classList.contains('alert-dot')) dot.classList.remove('active');
+            });
+            el.classList.add('active');
+            const clickedDot = el.querySelector('.tab-dot');
+            if (clickedDot) clickedDot.classList.add('active');
+
+            // Toggle Workspace views
+            const mainElements = document.querySelectorAll('.main-view-element');
+            const placeholder = document.getElementById('placeholder-workspace');
+
+            if (tabName === 'live') {
+                mainElements.forEach(el => el.style.display = ''); // reset to stylesheet default
+                placeholder.style.display = 'none';
+            } else {
+                mainElements.forEach(el => el.style.display = 'none');
+                placeholder.style.display = 'flex';
+                document.getElementById('ph-title').textContent = `${tabName.toUpperCase()} MODULE`;
+            }
+        }
+
         function switchRsTab(tab, el) {
             document.querySelectorAll('.rs-tab').forEach(t => t.classList.remove('active'));
             el.classList.add('active');
@@ -1491,7 +1526,6 @@
             const g = document.getElementById('feeds-grid');
             g.className = 'feeds-grid';
             if (mode !== 'auto') g.classList.add(mode);
-            // re-render card canvases
             setTimeout(redrawAllCardZones, 100);
         }
         function setSortMode(v) { sortMode = v; renderGrid() }
@@ -1499,47 +1533,81 @@
         /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
            FETCH & RENDER
         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-        function fetchCameras() {
-            fetch(`${API}/api/cameras`)
-                .then(r => r.json())
-                .then(data => {
-                    cameras = data;
-                    updateLiveBadge();
-                    renderGrid();
-                    renderCamList();
-                    updateBigStats();
-                    if (activeModalId) {
-                        const cam = cameras.find(c => c.camera_id === activeModalId);
-                        if (cam) populateModal(cam);
-                    }
-                }).catch(() => { });
-        }
+        async function fetchCameras() {
+            try {
+                const r = await fetch(`${API}/api/cameras`);
+                if (!r.ok) throw new Error('Network response was not ok');
+                const data = await r.json();
+                cameras = data;
+                isApiFailing = false;
 
-        function fetchStats() {
-            fetch(`${API}/api/stats`)
-                .then(r => r.json())
-                .then(data => {
-                    renderStatBars(data);
-                    if (data.total) document.getElementById('bsv-total').textContent = data.total;
-                }).catch(() => { });
+                updateLiveBadge();
+                renderGrid();
+                renderCamList();
+                updateBigStats();
 
-            if (activeModalId) {
-                fetch(`${API}/api/stats?camera_id=${activeModalId}`)
-                    .then(r => r.json())
-                    .then(renderModalHist).catch(() => { });
+                if (activeModalId) {
+                    const cam = cameras.find(c => c.camera_id === activeModalId);
+                    if (cam) populateModal(cam);
+                }
+            } catch (error) {
+                console.error("Failed to fetch cameras:", error);
+                if (!isApiFailing) handleApiError();
             }
         }
 
-        function fetchEvents() {
-            fetch(`${API}/api/parking/events?resolved=false&limit=30`)
-                .then(r => r.json())
-                .then(renderEvents).catch(() => { });
+        async function fetchStats() {
+            try {
+                const r = await fetch(`${API}/api/stats`);
+                if (!r.ok) throw new Error('API Error');
+                const data = await r.json();
+                renderStatBars(data);
+                if (data.total) document.getElementById('bsv-total').textContent = data.total;
+            } catch (error) {
+                console.error("Failed to fetch general stats");
+            }
+
+            if (activeModalId) {
+                try {
+                    const r = await fetch(`${API}/api/stats?camera_id=${activeModalId}`);
+                    if (!r.ok) throw new Error('API Error');
+                    const data = await r.json();
+                    renderModalHist(data);
+                } catch (error) {
+                    console.error("Failed to fetch modal stats");
+                }
+            }
+        }
+
+        async function fetchEvents() {
+            try {
+                const r = await fetch(`${API}/api/parking/events?resolved=false&limit=30`);
+                if (!r.ok) throw new Error('API Error');
+                const events = await r.json();
+                renderEvents(events);
+            } catch (error) {
+                console.error("Failed to fetch events");
+            }
+        }
+
+        function handleApiError() {
+            isApiFailing = true;
+            const badge = document.getElementById('live-count');
+            badge.textContent = "API DISCONNECTED";
+            badge.className = 'sys-badge badge-error';
+
+            // Clean up grid loader if api is fully unreachable
+            const loader = document.getElementById('loading-overlay');
+            if (loader) {
+                loader.innerHTML = "Unable to connect to Cluster API.<br/><span style='opacity:0.5'>Check network or backend status.</span>";
+            }
         }
 
         /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
            BADGE / HEADER
         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
         function updateLiveBadge() {
+            if (isApiFailing) return;
             const online = cameras.filter(c => c.connected).length;
             const badge = document.getElementById('live-count');
             badge.textContent = `${online} / ${cameras.length} ONLINE`;
@@ -1556,17 +1624,20 @@
         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
         function renderCamList() {
             const el = document.getElementById('cam-list');
-            if (!cameras.length) { el.innerHTML = '<div style="padding:20px;font-size:.75rem;color:var(--text)">No nodes</div>'; return }
+            if (!cameras.length) {
+                if (!isApiFailing) el.innerHTML = '<div style="padding:20px;font-size:.75rem;color:var(--text)">No nodes detected</div>';
+                return;
+            }
             el.innerHTML = cameras.map(c => `
-    <div class="cam-item ${activeModalId === c.camera_id ? 'selected' : ''}" onclick="openModal('${c.camera_id}')">
-      <span class="ci-dot ${c.connected ? 'live' : 'offline'}"></span>
-      <div class="ci-info">
-        <div class="ci-id">${c.camera_id}</div>
-        <div class="ci-sub">FPS:${c.fps} DET:${c.detections}</div>
-      </div>
-      ${c.detections > 0 ? `<span class="ci-badge">${c.detections}</span>` : ''}
-    </div>
-  `).join('');
+                <div class="cam-item ${activeModalId === c.camera_id ? 'selected' : ''}" onclick="openModal('${c.camera_id}')">
+                <span class="ci-dot ${c.connected ? 'live' : 'offline'}"></span>
+                <div class="ci-info">
+                    <div class="ci-id">${c.camera_id}</div>
+                    <div class="ci-sub">FPS:${c.fps} DET:${c.detections}</div>
+                </div>
+                ${c.detections > 0 ? `<span class="ci-badge">${c.detections}</span>` : ''}
+                </div>
+            `).join('');
         }
 
         /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1583,7 +1654,11 @@
         function renderGrid() {
             const grid = document.getElementById('feeds-grid');
             const sorted = getSortedCameras();
-            if (!sorted.length) {
+
+            const loader = document.getElementById('loading-overlay');
+            if (loader && sorted.length > 0) loader.remove();
+
+            if (!sorted.length && !isApiFailing && !loader) {
                 grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text);font-family:var(--mono);font-size:.8rem">No camera nodes registered.</p>';
                 return;
             }
@@ -1596,7 +1671,7 @@
                 if (!incomingIds.has(id)) document.getElementById(`card-${id}`)?.remove();
             });
 
-            sorted.forEach((cam, i) => {
+            sorted.forEach((cam) => {
                 const existing = document.getElementById(`card-${cam.camera_id}`);
                 const hasZone = !!savedZones[cam.camera_id];
                 const hasAlert = cam.detections > 0;
@@ -1608,44 +1683,49 @@
                     div.dataset.camid = cam.camera_id;
                     div.onclick = () => openModal(cam.camera_id);
                     div.innerHTML = `
-        <div class="card-header">
-          <span class="ci-dot ${cam.connected ? 'live' : 'offline'}" style="width:7px;height:7px;border-radius:50%;flex-shrink:0"></span>
-          <span class="ch-id">${cam.camera_id}</span>
-          <span class="ch-status ${cam.connected ? 'status-live' : 'status-off'}">${cam.connected ? 'LIVE' : 'OFF'}</span>
-        </div>
-        <div class="card-img-wrap">
-          <img src="${API}/api/cameras/${cam.camera_id}/feed" alt="${cam.camera_id}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22200%22><rect width=%22400%22 height=%22200%22 fill=%22%23020408%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23ff3b6b%22 font-family=%22monospace%22 font-size=%2214%22>SIGNAL LOST</text></svg>'"/>
-          <canvas class="card-zone-canvas" id="zc-${cam.camera_id}"></canvas>
-          ${hasAlert ? `<div class="alert-flash">▲ ALERT</div>` : ''}
-          ${hasZone ? `<div class="zone-indicator">⬡ ZONE</div>` : ''}
-        </div>
-        <div class="card-footer">
-          <div class="card-meta"><span class="mk">FPS</span><span class="mv hi" id="cfps-${cam.camera_id}">${cam.fps}</span></div>
-          <div class="card-meta"><span class="mk">DET</span><span class="mv ${hasAlert ? 'warn' : ''}" id="cdet-${cam.camera_id}">${cam.detections}</span></div>
-          <div class="card-meta"><span class="mk">ERR</span><span class="mv" id="cerr-${cam.camera_id}">${cam.errors}</span></div>
-        </div>
-      `;
+                        <div class="card-header">
+                        <span class="ci-dot ${cam.connected ? 'live' : 'offline'}" style="width:7px;height:7px;border-radius:50%;flex-shrink:0"></span>
+                        <span class="ch-id">${cam.camera_id}</span>
+                        <span class="ch-status ${cam.connected ? 'status-live' : 'status-off'}">${cam.connected ? 'LIVE' : 'OFF'}</span>
+                        </div>
+                        <div class="card-img-wrap">
+                        <img src="${API}/api/cameras/${cam.camera_id}/feed" alt="${cam.camera_id}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22200%22><rect width=%22400%22 height=%22200%22 fill=%22%23020408%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23ff3b6b%22 font-family=%22monospace%22 font-size=%2214%22>SIGNAL LOST</text></svg>'"/>
+                        <canvas class="card-zone-canvas" id="zc-${cam.camera_id}"></canvas>
+                        ${hasAlert ? `<div class="alert-flash">▲ ALERT</div>` : ''}
+                        ${hasZone ? `<div class="zone-indicator">⬡ ZONE</div>` : ''}
+                        </div>
+                        <div class="card-footer">
+                        <div class="card-meta"><span class="mk">FPS</span><span class="mv hi" id="cfps-${cam.camera_id}">${cam.fps}</span></div>
+                        <div class="card-meta"><span class="mk">DET</span><span class="mv ${hasAlert ? 'warn' : ''}" id="cdet-${cam.camera_id}">${cam.detections}</span></div>
+                        <div class="card-meta"><span class="mk">ERR</span><span class="mv" id="cerr-${cam.camera_id}">${cam.errors}</span></div>
+                        </div>
+                    `;
                     grid.appendChild(div);
-                    // Draw zone on this card
                     if (hasZone) scheduleCardZoneDraw(cam.camera_id);
                 } else {
-                    // Update existing card
+                    // Update existing card properties
                     const dot = existing.querySelector('.ci-dot');
                     if (dot) dot.className = `ci-dot ${cam.connected ? 'live' : 'offline'}`;
                     const st = existing.querySelector('.ch-status');
                     if (st) { st.className = `ch-status ${cam.connected ? 'status-live' : 'status-off'}`; st.textContent = cam.connected ? 'LIVE' : 'OFF' }
+
                     const el1 = document.getElementById(`cfps-${cam.camera_id}`);
                     const el2 = document.getElementById(`cdet-${cam.camera_id}`);
                     const el3 = document.getElementById(`cerr-${cam.camera_id}`);
                     if (el1) el1.textContent = cam.fps;
                     if (el2) { el2.textContent = cam.detections; el2.className = `mv ${cam.detections > 0 ? 'warn' : ''}` }
                     if (el3) el3.textContent = cam.errors;
+
                     existing.className = `feed-card ${hasAlert ? 'has-alert' : ''} ${hasZone ? 'has-zone' : ''}`;
+
+                    // Flash / Zone indicators toggle dynamically
+                    let flash = existing.querySelector('.alert-flash');
+                    if (hasAlert && !flash) existing.querySelector('.card-img-wrap').insertAdjacentHTML('beforeend', '<div class="alert-flash">▲ ALERT</div>');
+                    else if (!hasAlert && flash) flash.remove();
                 }
             });
         }
 
-        /* Draw zone on a feed card thumbnail */
         function scheduleCardZoneDraw(camId) {
             const img = document.querySelector(`#card-${camId} img`);
             if (!img) return;
@@ -1660,15 +1740,14 @@
             if (!cardCanvas || !pts || pts.length < 3) return;
 
             const img = cardCanvas.previousElementSibling;
-            if (!img || !img.naturalWidth) return;
+            if (!img || !img.offsetWidth || !img.offsetHeight) return; // Prevent 0/0 canvas errors
 
-            cardCanvas.width = img.offsetWidth || img.naturalWidth;
-            cardCanvas.height = img.offsetHeight || img.naturalHeight;
+            cardCanvas.width = img.offsetWidth || 300;
+            cardCanvas.height = img.offsetHeight || 200;
 
             const cctx = cardCanvas.getContext('2d');
             cctx.clearRect(0, 0, cardCanvas.width, cardCanvas.height);
 
-            // Scale from 640x480 space to card size
             const sx = cardCanvas.width / 640;
             const sy = cardCanvas.height / 480;
 
@@ -1693,61 +1772,82 @@
            STATS
         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
         function updateBigStats() {
-            const total = cameras.reduce((s, c) => s + c.detections, 0);
+            const total = cameras.reduce((s, c) => s + (c.detections || 0), 0);
             document.getElementById('bsv-total').textContent = total;
             document.getElementById('ss-detections').textContent = total;
         }
 
         function renderStatBars(data) {
             const el = document.getElementById('detection-bars');
-            if (!data || !data.total) { el.innerHTML = '<div style="color:var(--text);font-size:.75rem;text-align:center;padding:20px 0">No data</div>'; return }
+            if (!data || !data.total || !data.by_label) {
+                el.innerHTML = '<div style="color:var(--text);font-size:.75rem;text-align:center;padding:20px 0">No data</div>';
+                return;
+            }
             const max = Math.max(...Object.values(data.by_label));
             el.innerHTML = Object.entries(data.by_label).map(([k, v]) => `
-    <div class="stat-bar-row">
-      <span class="bar-label">${k.replace('_', ' ')}</span>
-      <div class="bar-track"><div class="bar-fill" style="width:${max ? Math.round(v / max * 100) : 0}%"></div></div>
-      <span class="bar-val">${v}</span>
-    </div>
-  `).join('');
+                <div class="stat-bar-row">
+                <span class="bar-label">${k.replace('_', ' ')}</span>
+                <div class="bar-track"><div class="bar-fill" style="width:${max ? Math.round(v / max * 100) : 0}%"></div></div>
+                <span class="bar-val">${v}</span>
+                </div>
+            `).join('');
         }
 
         function renderModalHist(data) {
             const el = document.getElementById('modal-hist');
-            if (!data || !data.total) { el.innerHTML = '<div style="color:var(--text);font-size:.75rem;text-align:center;padding:20px 0">No history</div>'; return }
+            if (!data || !data.total || !data.by_label) {
+                el.innerHTML = '<div style="color:var(--text);font-size:.75rem;text-align:center;padding:20px 0">No history</div>';
+                return;
+            }
             el.innerHTML = Object.entries(data.by_label).map(([k, v]) => `
-    <div class="mini-stat-row">
-      <span class="msr-k">${k.replace('_', ' ')}</span>
-      <span class="msr-v">${v}</span>
-    </div>
-  `).join('');
+                <div class="mini-stat-row">
+                <span class="msr-k">${k.replace('_', ' ')}</span>
+                <span class="msr-v">${v}</span>
+                </div>
+            `).join('');
         }
 
         /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-           EVENTS
+           EVENTS & ALERTS
         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
         function renderEvents(events) {
             alertCount = events.length;
+
+            // Dynamic Alert UI
             const badge = document.getElementById('alert-badge');
-            const ssAlerts = document.getElementById('ss-alerts');
+            const alertTabDot = document.getElementById('alert-tab-dot');
+            const alertTabCount = document.getElementById('alert-tab-count');
+
             badge.textContent = alertCount;
             badge.style.display = alertCount ? 'inline-block' : 'none';
-            ssAlerts.textContent = alertCount;
-            document.getElementById('bsv-infractions').textContent = alertCount;
+
+            if (alertCount > 0) {
+                alertTabDot.classList.add('alert-dot');
+                alertTabCount.textContent = `(${alertCount})`;
+            } else {
+                alertTabDot.classList.remove('alert-dot');
+                alertTabCount.textContent = '';
+            }
+
             document.getElementById('ss-alerts').textContent = alertCount;
+            document.getElementById('bsv-infractions').textContent = alertCount;
 
             const el = document.getElementById('events-list');
-            if (!events.length) { el.innerHTML = '<div class="no-events">No active infractions</div>'; return }
+            if (!events.length) {
+                el.innerHTML = '<div class="no-events">No active infractions</div>';
+                return;
+            }
             el.innerHTML = events.map(e => `
-    <div class="event-entry">
-      <div class="ev-icon">⚠</div>
-      <div class="ev-body">
-        <div class="ev-title">[${e.camera_id}] INFRACTION</div>
-        <div class="ev-detail">Unauthorized ${e.meta?.vehicle_label || 'vehicle'} detected in restricted zone.</div>
-        ${e.meta?.license_plate ? `<div class="ev-plate">${e.meta.license_plate}</div>` : ''}
-        <div class="ev-time">${new Date(e.timestamp).toLocaleTimeString()}</div>
-      </div>
-    </div>
-  `).join('');
+                <div class="event-entry">
+                <div class="ev-icon">⚠</div>
+                <div class="ev-body">
+                    <div class="ev-title">[${e.camera_id}] INFRACTION</div>
+                    <div class="ev-detail">Unauthorized ${e.meta?.vehicle_label || 'vehicle'} detected in restricted zone.</div>
+                    ${e.meta?.license_plate ? `<div class="ev-plate">${e.meta.license_plate}</div>` : ''}
+                    <div class="ev-time">${new Date(e.timestamp).toLocaleTimeString()}</div>
+                </div>
+                </div>
+            `).join('');
         }
 
         /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1763,7 +1863,6 @@
             cancelDraw();
             renderModalZoneStatus();
 
-            // Draw existing zone
             requestAnimationFrame(() => {
                 if (savedZones[camId]) drawSavedZone(savedZones[camId]);
                 else clearCanvas();
@@ -1771,8 +1870,6 @@
 
             document.getElementById('cam-modal').classList.add('active');
             document.body.style.overflow = 'hidden';
-
-            // Highlight cam in list
             renderCamList();
         }
 
@@ -1783,9 +1880,9 @@
             dot.style.background = online ? 'var(--cyan)' : 'var(--red)';
             dot.style.boxShadow = online ? '0 0 8px var(--cyan)' : '0 0 8px var(--red)';
             document.getElementById('modal-cam-id').textContent = cam.camera_id;
-            document.getElementById('m-fps').textContent = cam.fps;
-            document.getElementById('m-det').textContent = cam.detections;
-            document.getElementById('m-err').textContent = cam.errors;
+            document.getElementById('m-fps').textContent = cam.fps || '--';
+            document.getElementById('m-det').textContent = cam.detections || '0';
+            document.getElementById('m-err').textContent = cam.errors || '0';
 
             const hasZone = !!savedZones[cam.camera_id];
             const zoneBadge = document.getElementById('m-zone-badge');
@@ -1847,32 +1944,33 @@
             const btn = document.getElementById('btn-draw');
             btn.textContent = 'Draw Zone';
             btn.classList.remove('saving', 'cancel');
-            // Restore saved zone if any
+
             if (activeModalId && savedZones[activeModalId]) drawSavedZone(savedZones[activeModalId]);
             else clearCanvas();
         }
 
         function confirmSave() {
-            if (draftPts.length < 3) { alert('Place at least 3 points.'); return }
+            if (draftPts.length < 3) { alert('Place at least 3 points to create a zone.'); return }
             saveZone(draftPts);
         }
 
-        function clearZone() {
+        async function clearZone() {
             if (!activeModalId) return;
             delete savedZones[activeModalId];
             localStorage.setItem('camnet_zones', JSON.stringify(savedZones));
             clearCanvas();
             renderModalZoneStatus();
-            drawCardZone(activeModalId); // clear card too
-            // Also push to backend
-            fetch(`${API}/api/cameras/${activeModalId}/zones`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ zones: [] })
-            }).catch(() => { });
+            drawCardZone(activeModalId);
+
+            try {
+                await fetch(`${API}/api/cameras/${activeModalId}/zones`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ zones: [] })
+                });
+            } catch (e) { console.warn('Could not sync zone clearance to backend'); }
         }
 
-        function saveZone(pts) {
-            // Save locally first for persistence
+        async function saveZone(pts) {
             savedZones[activeModalId] = pts;
             localStorage.setItem('camnet_zones', JSON.stringify(savedZones));
 
@@ -1884,24 +1982,20 @@
             btn.classList.remove('saving');
             draftPts = [];
 
-            // Draw saved zone in modal
             drawSavedZone(pts);
-            // Draw on card thumbnail
             scheduleCardZoneDraw(activeModalId);
             renderModalZoneStatus();
-            renderGrid(); // refresh card classes
+            renderGrid();
 
-            // Push to backend
-            fetch(`${API}/api/cameras/${activeModalId}/zones`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ zones: [pts] })
-            }).then(r => r.json()).catch(() => { });
+            try {
+                await fetch(`${API}/api/cameras/${activeModalId}/zones`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ zones: [pts] })
+                });
+            } catch (e) { console.warn('Could not sync zone save to backend'); }
         }
 
-        /* Canvas drawing */
-        function clearCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
+        function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
 
         function drawSavedZone(pts) {
             clearCanvas();
@@ -1910,25 +2004,17 @@
             ctx.moveTo(pts[0][0], pts[0][1]);
             for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
             ctx.closePath();
-            ctx.fillStyle = 'rgba(255,59,107,0.18)';
-            ctx.fill();
-            ctx.strokeStyle = '#ff3b6b';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([6, 4]);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            // Vertices
+            ctx.fillStyle = 'rgba(255,59,107,0.18)'; ctx.fill();
+            ctx.strokeStyle = '#ff3b6b'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
+
             ctx.fillStyle = 'rgba(255,255,255,0.9)';
-            pts.forEach(p => {
-                ctx.beginPath(); ctx.arc(p[0], p[1], 4, 0, Math.PI * 2); ctx.fill();
-            });
+            pts.forEach(p => { ctx.beginPath(); ctx.arc(p[0], p[1], 4, 0, Math.PI * 2); ctx.fill(); });
         }
 
         function drawDraftZone() {
             clearCanvas();
             if (!draftPts.length) return;
 
-            // Show any saved zone as ghost
             if (activeModalId && savedZones[activeModalId]) {
                 const sp = savedZones[activeModalId];
                 ctx.beginPath();
@@ -1946,9 +2032,10 @@
                 ctx.fillStyle = 'rgba(0,255,224,0.15)'; ctx.fill();
             }
             ctx.strokeStyle = 'var(--cyan,#00ffe0)'; ctx.lineWidth = 2; ctx.stroke();
+
             ctx.fillStyle = '#fff';
             draftPts.forEach(p => { ctx.beginPath(); ctx.arc(p[0], p[1], 4, 0, Math.PI * 2); ctx.fill() });
-            // First point highlight
+
             if (draftPts.length > 2) {
                 ctx.beginPath(); ctx.arc(draftPts[0][0], draftPts[0][1], 7, 0, Math.PI * 2);
                 ctx.strokeStyle = 'rgba(0,255,224,.6)'; ctx.lineWidth = 1.5; ctx.stroke();
@@ -1958,6 +2045,9 @@
         canvas.addEventListener('mousedown', function (e) {
             if (!isDrawMode) return;
             const rect = canvas.getBoundingClientRect();
+            // Prevent drawing errors if window resizes breaking ratio bounds
+            if (rect.width === 0 || rect.height === 0) return;
+
             const sx = canvas.width / rect.width;
             const sy = canvas.height / rect.height;
             const x = Math.round((e.clientX - rect.left) * sx);
@@ -1978,9 +2068,8 @@
         setInterval(fetchEvents, 8000);
 
         document.addEventListener('keydown', e => { if (e.key === 'Escape' && activeModalId) closeModal() });
-
-        // On load, re-draw zones on existing cards (after a tick)
         window.addEventListener('load', () => setTimeout(redrawAllCardZones, 500));
+        window.addEventListener('resize', () => { if (!activeModalId) setTimeout(redrawAllCardZones, 200) });
     </script>
 </body>
 
