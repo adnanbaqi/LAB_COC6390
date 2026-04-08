@@ -1720,7 +1720,7 @@
 
                     // Flash / Zone indicators toggle dynamically
                     let flash = existing.querySelector('.alert-flash');
-                    if (hasAlert && !flash) existing.querySelector('.card-img-wrap').insertAdjacentHTML('beforeend', '<div class="alert-flash">▲ ALERT</div>');
+                    if (hasAlert && !flash) existing.querySelector('.card-img-wrap').insertAdjacentHTML('beforeend', '<div class="alert-flash"></div>');
                     else if (!hasAlert && flash) flash.remove();
                 }
             });

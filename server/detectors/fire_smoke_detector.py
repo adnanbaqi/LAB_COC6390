@@ -34,6 +34,8 @@ class FireSmokeDetector(BaseDetector):
 
         try:
             self._model = YOLO(model_path)
+            # --- ADD THIS LINE TO DEBUG CLASS NAMES ---
+            log.info("Fire/Smoke Model loaded. Available classes: %s", self._model.names)
         except Exception:
             log.exception("Failed to load YOLO model for Fire/Smoke. Ensure %s exists.", model_path)
             raise
