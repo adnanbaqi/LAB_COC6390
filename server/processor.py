@@ -118,11 +118,13 @@ class StreamProcessor:
     def get_stats(self) -> dict:
         s = self.stats
 
-        # Extract active zones from the parking detector
+        # Extract active zones from the parking detector safely
         active_zones = []
         for detector in self.detectors:
             if detector.name == "illegal_parking" and hasattr(detector, "_zones"):
-                active_zones = [z.tolist() for z in detector._zones]
+                # Use .get() safely grabbing the list by camera_id
+                cam_zones = detector._zones.get(self.camera_id, [])
+                active_zones = [z.tolist() for z in cam_zones]
                 break
 
         return {
@@ -248,6 +250,12 @@ class StreamProcessor:
     def _draw_detections(self, frame: np.ndarray, detections: List[Detection]) -> np.ndarray:
         """Draw bounding boxes for the given detections onto a copy of the frame."""
         annotated = frame.copy()
+
+        # Draw the parking zones on the frame (if applicable)
+        for detector in self.detectors:
+            if detector.name == "illegal_parking" and hasattr(detector, "draw_zones"):
+                annotated = detector.draw_zones(annotated, self.camera_id)
+
         for det in detections:
             x1, y1, x2, y2 = det.bbox
             

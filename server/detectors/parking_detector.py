@@ -6,7 +6,7 @@ Algorithm
 ─────────
 1.  Detect all vehicle bounding boxes in the frame.
 2.  Check whether each vehicle's bottom-centre point falls inside any
-    pre-defined "no-parking" polygon.
+    pre-defined "no-parking" polygon for that specific camera.
 3.  A vehicle that stays in a zone for >= DWELL_SECONDS is flagged as
     illegally parked.
 4.  Once flagged, the event is not re-raised until the vehicle disappears
@@ -60,48 +60,51 @@ def _point_in_polygon(px: int, py: int, polygon: np.ndarray) -> bool:
 
 
 class IllegalParkingDetector(BaseDetector):
-    """
-    Parameters
-    ──────────
-    zones : list of polygons.  Each polygon is a list of (x, y) pixel
-            coordinates defining a no-parking region in the *frame*.
-            Example (entire lower-half of a 640×480 frame):
-                zones=[[(0,240),(640,240),(640,480),(0,480)]]
-    """
-
     name = "illegal_parking"
 
     def __init__(
         self,
         model_path: str = "yolov8x.pt",
-        zones: Optional[List[List[Tuple[int, int]]]] = None,
         dwell_seconds: float = DWELL_SECONDS,
     ):
         self._model        = YOLO(model_path)
-        self._zones        = [
-            np.array(z, dtype=np.int32) for z in (zones or [])
-        ]
         self._dwell        = dwell_seconds
-        self._tracks: Dict[int, _VehicleTrack] = {}   # track_id → track
-        self._next_id      = 0
-
-    # ─── NEW: Dynamic Zone Updater for UI ─────────────────────────────────
-
-    def update_zones(self, zones: List[List[Tuple[int, int]]]):
-        """Dynamically update the no-parking zones at runtime."""
-        self._zones = [np.array(z, dtype=np.int32) for z in (zones or [])]
         
-        # Clear existing tracks since the boundaries just changed
-        self._tracks.clear() 
-        log.info("[%s] No-parking zones updated dynamically via UI.", self.name)
+        # Namespaced by camera_id to support multi-cam seamlessly
+        self._zones: Dict[str, List[np.ndarray]] = {} 
+        self._tracks: Dict[str, Dict[int, _VehicleTrack]] = {} 
+        self._next_id: Dict[str, int] = {}
+
+    # ─── Dynamic Zone Updater for UI ──────────────────────────────────────
+
+    def update_zones(self, camera_id: str, zones: List[List[Tuple[int, int]]]):
+        """Dynamically update the no-parking zones at runtime for a specific camera."""
+        if not zones:
+            self._zones.pop(camera_id, None)
+            self._tracks.pop(camera_id, None)
+            log.info("[%s] No-parking zones cleared via UI.", camera_id)
+            return
+
+        self._zones[camera_id] = [np.array(z, dtype=np.int32) for z in zones]
+        
+        # Clear existing tracks for this camera since the boundaries changed
+        if camera_id in self._tracks:
+            self._tracks[camera_id].clear() 
+            
+        log.info("[%s] No-parking zones updated dynamically via UI.", camera_id)
 
     # ─── Public API ───────────────────────────────────────────────────────
 
     def detect(self, frame: np.ndarray, camera_id: str = "unknown") -> List[Detection]:
-        if not self._zones:
-            # We no longer want to spam the warning if zones are cleared via UI,
-            # just silently return until they draw a new one.
+        # Fast exit if this camera has no zones assigned
+        cam_zones = self._zones.get(camera_id, [])
+        if not cam_zones:
             return []
+
+        # Initialize tracking memory for new cameras
+        if camera_id not in self._tracks:
+            self._tracks[camera_id] = {}
+            self._next_id[camera_id] = 0
 
         results   = self._model(frame, verbose=False)[0]
         events: List[Detection] = []
@@ -117,8 +120,9 @@ class IllegalParkingDetector(BaseDetector):
             cx = (x1 + x2) // 2
             cy = y2   # bottom-centre — ground contact point
 
+            # Check against THIS camera's zones
             in_zone = any(
-                _point_in_polygon(cx, cy, z) for z in self._zones
+                _point_in_polygon(cx, cy, z) for z in cam_zones
             )
             if not in_zone:
                 continue
@@ -126,8 +130,8 @@ class IllegalParkingDetector(BaseDetector):
             bbox = [x1, y1, x2, y2]
             current_bboxes.append(bbox)
 
-            track_id = self._match_or_create(bbox)
-            track    = self._tracks[track_id]
+            track_id = self._match_or_create(camera_id, bbox)
+            track    = self._tracks[camera_id][track_id]
             dwell    = time.monotonic() - track.first_seen
 
             if dwell >= self._dwell and not track.alerted:
@@ -151,43 +155,50 @@ class IllegalParkingDetector(BaseDetector):
                     camera_id, label, dwell, bbox,
                 )
 
-        # Prune stale tracks
-        self._prune_tracks(current_bboxes)
+        # Prune stale tracks for THIS camera only
+        self._prune_tracks(camera_id, current_bboxes)
         return events
 
     # ─── Zone rendering helper (for annotated preview) ───────────────────
 
-    def draw_zones(self, frame: np.ndarray) -> np.ndarray:
+    def draw_zones(self, frame: np.ndarray, camera_id: str) -> np.ndarray:
+        cam_zones = self._zones.get(camera_id, [])
+        if not cam_zones:
+            return frame
+
         overlay = frame.copy()
-        for zone in self._zones:
+        for zone in cam_zones:
             cv2.fillPoly(overlay, [zone], (0, 0, 200))
         return cv2.addWeighted(overlay, 0.25, frame, 0.75, 0)
 
     # ─── Internal helpers ────────────────────────────────────────────────
 
-    def _match_or_create(self, bbox: List[int]) -> int:
+    def _match_or_create(self, camera_id: str, bbox: List[int]) -> int:
         best_id:  Optional[int] = None
         best_iou: float         = IOU_MATCH_THRESHOLD
+        
+        cam_tracks = self._tracks[camera_id]
 
-        for tid, track in self._tracks.items():
+        for tid, track in cam_tracks.items():
             score = _iou(bbox, track.bbox)
             if score > best_iou:
                 best_iou = score
                 best_id  = tid
 
         if best_id is not None:
-            self._tracks[best_id].bbox = bbox
+            cam_tracks[best_id].bbox = bbox
             return best_id
 
-        new_id = self._next_id
-        self._tracks[new_id] = _VehicleTrack(bbox=bbox)
-        self._next_id += 1
+        new_id = self._next_id[camera_id]
+        cam_tracks[new_id] = _VehicleTrack(bbox=bbox)
+        self._next_id[camera_id] += 1
         return new_id
 
-    def _prune_tracks(self, current_bboxes: List[List[int]]):
+    def _prune_tracks(self, camera_id: str, current_bboxes: List[List[int]]):
+        cam_tracks = self._tracks[camera_id]
         stale = [
-            tid for tid, track in self._tracks.items()
+            tid for tid, track in cam_tracks.items()
             if not any(_iou(track.bbox, b) >= IOU_MATCH_THRESHOLD for b in current_bboxes)
         ]
         for tid in stale:
-            del self._tracks[tid]
+            del cam_tracks[tid]

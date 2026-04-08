@@ -81,15 +81,20 @@ manager = ProcessorManager()
 
 # ─── Detector factory ─────────────────────────────────────────────────────────
 
-def _build_detectors(parking_zones: Optional[list] = None) -> list:
+def _build_detectors(camera_id: str, parking_zones: Optional[list] = None) -> list:
     """
     Build the detector stack for a camera.
     parking_zones: list of polygon point-lists in 640x480 pixel coords.
     """
     zones = parking_zones or [[(0, 320), (640, 320), (640, 480), (0, 480)]]
+    
+    # Initialize without zones, then apply them for this specific camera
+    parking_detector = IllegalParkingDetector()
+    parking_detector.update_zones(camera_id, zones)
+
     return [
         TrashDetector(),
-        IllegalParkingDetector(zones=zones),
+        parking_detector,
         FireSmokeDetector(),
     ]
 
@@ -99,7 +104,7 @@ def _register(camera_id: str, stream_url: str, parking_zones: Optional[list] = N
     proc = StreamProcessor(
         camera_id=camera_id,
         stream_url=stream_url,
-        detectors=_build_detectors(parking_zones),
+        detectors=_build_detectors(camera_id, parking_zones),
     )
     manager.add(proc)
     log.info("Camera registered: %s -> %s", camera_id, stream_url)
@@ -303,10 +308,11 @@ def update_camera_zones(camera_id):
     if not new_zones or not any(new_zones):
         for detector in proc.detectors:
             if detector.name == "illegal_parking":
-                detector.update_zones([])
+                # ADDED camera_id
+                detector.update_zones(camera_id, [])
         return jsonify({"status": "cleared", "camera_id": camera_id})
 
-    # ── Scale from canvas space (640×480) to real frame size ──
+    # ── Scale from canvas space (640x480) to real frame size ──
     frame = proc.get_latest_frame()
     frame_w, frame_h = 640, 480  # fallback
     if frame is not None:
@@ -329,7 +335,8 @@ def update_camera_zones(camera_id):
     updated = False
     for detector in proc.detectors:
         if detector.name == "illegal_parking":
-            detector.update_zones(scaled_zones)
+            # ADDED camera_id
+            detector.update_zones(camera_id, scaled_zones)
             updated = True
 
     if not updated:
