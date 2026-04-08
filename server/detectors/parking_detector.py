@@ -28,8 +28,8 @@ from .base import BaseDetector, Detection
 log = logging.getLogger(__name__)
 
 VEHICLE_LABELS = {"car", "truck", "bus", "motorcycle", "bicycle"}
-CONFIDENCE_THRESHOLD = 0.50
-DWELL_SECONDS        = 120      # seconds before raising an event
+CONFIDENCE_THRESHOLD = 0.35
+DWELL_SECONDS        = 6      # seconds before raising an event
 IOU_MATCH_THRESHOLD  = 0.35    # overlap to consider same vehicle across frames
 
 

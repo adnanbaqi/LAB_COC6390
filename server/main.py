@@ -41,6 +41,10 @@ DASHBOARD_DIR = os.path.join(os.path.dirname(__file__), "..", "dashboard")
 def dashboard():
     return send_from_directory(os.path.abspath(DASHBOARD_DIR), "index.html")
 
+@app.route("/<path:filename>")
+def dashboard_static(filename):
+    return send_from_directory(os.path.abspath(DASHBOARD_DIR), filename)
+
 
 # ─── Dev runner ──────────────────────────────────────────────────────────────
 

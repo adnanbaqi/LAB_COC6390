@@ -250,7 +250,15 @@ class StreamProcessor:
         annotated = frame.copy()
         for det in detections:
             x1, y1, x2, y2 = det.bbox
-            color = (0, 0, 255) if det.label == "illegal_parking" else (0, 200, 50)
+            
+            # Dynamic bounding box colors based on threat level
+            if det.label in ["fire", "smoke"]:
+                color = (0, 165, 255) # Orange for fire/smoke (BGR format)
+            elif det.label == "illegal_parking":
+                color = (0, 0, 255)   # Red
+            else:
+                color = (0, 200, 50)  # Green
+
             cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
             text = f"{det.label} {det.confidence:.0%}"
             cv2.putText(annotated, text, (x1, y1 - 6),
@@ -306,6 +314,21 @@ class StreamProcessor:
                     dwell_time=det.meta.get('dwell_seconds', 0),
                     image_path=snapshot_path
                 )
+            
+            # --- NEW: FIRE & SMOKE CRITICAL ALERTS ---
+            elif det.label in ["fire", "smoke"]:
+                # 1. Log the event to MongoDB
+                log_detection(det, snapshot_path)
+                
+                # 2. Trigger Critical SMS Alert immediately
+                sms_msg = (
+                    f"CRITICAL: {det.label.upper()} DETECTED!\n"
+                    f"Cam: {self.camera_id}\n"
+                    f"Confidence: {det.confidence:.0%}"
+                )
+                send_sms_alert(sms_msg)
+            # -----------------------------------------
+            
             else:
                 log_detection(det, snapshot_path)
         except Exception:

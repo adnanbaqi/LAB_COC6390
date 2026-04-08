@@ -32,6 +32,7 @@ from flask import Flask, Response, jsonify, request, abort
 from .processor import ProcessorManager, StreamProcessor
 from .detectors.trash_detector import TrashDetector
 from .detectors.parking_detector import IllegalParkingDetector
+from .detectors.fire_smoke_detector import FireSmokeDetector
 from .db.mongo import get_parking_events, resolve_parking_event, get_detection_stats
 
 log = logging.getLogger(__name__)
@@ -89,6 +90,7 @@ def _build_detectors(parking_zones: Optional[list] = None) -> list:
     return [
         TrashDetector(),
         IllegalParkingDetector(zones=zones),
+        FireSmokeDetector(),
     ]
 
 
