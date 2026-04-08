@@ -45,29 +45,23 @@ load_dotenv()
 def load_cameras_from_env() -> list:
     """Scans environment variables for camera configurations."""
     cameras = []
-    default_zones = [[(0, 320), (640, 320), (640, 480), (0, 480)]]
+    # FIX: Default zones should be EMPTY
+    default_zones = [] 
     
-    # Scan for CAMERA_1 up to CAMERA_20
     for i in range(1, 21):
         cam_id = os.getenv(f"CAMERA_{i}_ID")
         url = os.getenv(f"CAMERA_{i}_URL")
         zones_str = os.getenv(f"CAMERA_{i}_ZONES")
         
-        # Only register if both ID and URL are provided
         if cam_id and url:
-            zones = default_zones
-            if zones_str:
-                try:
-                    zones = json.loads(zones_str)
-                except json.JSONDecodeError:
-                    log.warning("[%s] Invalid JSON in ZONES. Using default.", cam_id)
+            # Use provided zones or an empty list
+            zones = json.loads(zones_str) if zones_str else []
             
             cameras.append({
                 "camera_id": cam_id,
                 "stream_url": url,
                 "parking_zones": zones
             })
-            
     return cameras
 
 PI_CAMERAS = load_cameras_from_env()
@@ -82,13 +76,10 @@ manager = ProcessorManager()
 # ─── Detector factory ─────────────────────────────────────────────────────────
 
 def _build_detectors(camera_id: str, parking_zones: Optional[list] = None) -> list:
-    """
-    Build the detector stack for a camera.
-    parking_zones: list of polygon point-lists in 640x480 pixel coords.
-    """
-    zones = parking_zones or [[(0, 320), (640, 320), (640, 480), (0, 480)]]
+    """Build the detector stack for a camera."""
+    # FIX: Remove the hardcoded [(0,320)...] logic
+    zones = parking_zones or [] 
     
-    # Initialize without zones, then apply them for this specific camera
     parking_detector = IllegalParkingDetector()
     parking_detector.update_zones(camera_id, zones)
 

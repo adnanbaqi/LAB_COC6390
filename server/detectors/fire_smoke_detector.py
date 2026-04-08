@@ -19,7 +19,7 @@ from .base import BaseDetector, Detection
 log = logging.getLogger(__name__)
 
 # Pull confidence threshold from .env, default to 0.45
-CONFIDENCE_THRESHOLD = float(os.getenv("FIRE_SMOKE_CONFIDENCE", "0.25"))
+CONFIDENCE_THRESHOLD = float(os.getenv("FIRE_SMOKE_CONFIDENCE", "0.45"))
 TARGET_LABELS = {"fire", "smoke"}
 
 class FireSmokeDetector(BaseDetector):

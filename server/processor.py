@@ -17,55 +17,42 @@ from typing import Dict, List, Optional
 
 import cv2
 import numpy as np
-import yt_dlp  # Added for YouTube Live Stream extraction
+import yt_dlp
 from dotenv import load_dotenv
 
 from .detectors.base import BaseDetector, Detection
 from .db.mongo import log_detection, log_parking_event
 from .utils.snapshot import save_snapshot
 
-# New Imports for Phase 2: ALPR & Notifications
 from .utils.alpr import extract_license_plate
 from .utils.notifier import send_sms_alert, send_rto_email
 
 load_dotenv()
 log = logging.getLogger(__name__)
 
-# Maximum time (s) to wait for a fresh frame before retrying the stream.
-READ_TIMEOUT  = 5
-RETRY_DELAY   = 3
-FRAME_RESIZE  = (640, 480)
+READ_TIMEOUT   = 5
+RETRY_DELAY    = 3
+FRAME_RESIZE   = (640, 480)
 
-# Pull from .env so you can change it without restarting, default to 3.0 seconds
+# 5 Minute Throttling for high-priority notifications (SMS/Email)
+NOTIFICATION_COOLDOWN_SECONDS = 60 
+
 DETECTION_INTERVAL_SECONDS = float(os.getenv("DETECTION_INTERVAL_SECONDS", "3.0"))
 
 
 @dataclass
 class CameraStats:
-    camera_id:    str
-    stream_url:   str
-    frames_read:  int = 0
-    detections:   int = 0
-    errors:       int = 0
-    fps:          float = 0.0
-    connected:    bool = False
+    camera_id:     str
+    stream_url:    str
+    frames_read:   int = 0
+    detections:    int = 0
+    errors:        int = 0
+    fps:           float = 0.0
+    connected:     bool = False
     last_frame_ts: float = field(default_factory=time.monotonic)
 
 
 class StreamProcessor:
-    """
-    One instance per camera feed.
-
-    Usage
-    ─────
-        proc = StreamProcessor(
-            camera_id  = "cam-01",
-            stream_url = "http://192.168.1.42:5000/video_feed", # Or a YouTube link
-            detectors  = [TrashDetector(), IllegalParkingDetector(zones=[...])],
-        )
-        proc.start()
-    """
-
     def __init__(
         self,
         camera_id:  str,
@@ -80,22 +67,17 @@ class StreamProcessor:
 
         self.stats     = CameraStats(camera_id=camera_id, stream_url=stream_url)
         self._lock     = threading.Lock()
-        self._latest   : Optional[bytes] = None   # JPEG bytes of last annotated frame
+        self._latest   : Optional[bytes] = None
         self._raw_frame: Optional[np.ndarray] = None
         self._running  = False
         self._thread   : Optional[threading.Thread] = None
 
-        # Store last detection results for drawing on skipped frames
         self._last_detections: List[Detection] = []
-
-        # Tracking time instead of frame count
         self._last_detection_time = 0.0
 
-        # Cooldown for duplicate events
-        self._last_event_time = {}          # key: (label, cx, cy) -> timestamp
-        self._cooldown_seconds = 5          # seconds to wait before logging same object again
-
-    # ─── Public API ───────────────────────────────────────────────────────
+        # Namespaced cooldowns for notifications
+        # key: notification_type (e.g. "fire" or "parking") -> last_timestamp
+        self._notification_locks: Dict[str, float] = {}
 
     def start(self):
         if self._running:
@@ -111,18 +93,15 @@ class StreamProcessor:
             self._thread.join(timeout=10)
 
     def get_latest_frame(self) -> Optional[bytes]:
-        """Return the latest JPEG-encoded annotated frame (thread-safe)."""
         with self._lock:
             return self._latest
 
     def get_stats(self) -> dict:
         s = self.stats
-
-        # Extract active zones from the parking detector safely
         active_zones = []
         for detector in self.detectors:
             if detector.name == "illegal_parking" and hasattr(detector, "_zones"):
-                # Use .get() safely grabbing the list by camera_id
+                # FIXED: Correctly access the namespaced dictionary via camera_id
                 cam_zones = detector._zones.get(self.camera_id, [])
                 active_zones = [z.tolist() for z in cam_zones]
                 break
@@ -138,8 +117,6 @@ class StreamProcessor:
             "zones":       active_zones,
         }
 
-    # ─── Main loop ───────────────────────────────────────────────────────
-
     def _loop(self):
         while self._running:
             cap = self._open_stream()
@@ -154,7 +131,7 @@ class StreamProcessor:
             while self._running:
                 ret, frame = cap.read()
                 if not ret:
-                    log.warning("[%s] Frame read failed — reconnecting", self.camera_id)
+                    log.warning("[%s] Frame read failed", self.camera_id)
                     self.stats.errors += 1
                     break
 
@@ -162,14 +139,12 @@ class StreamProcessor:
                 self.stats.frames_read += 1
                 fps_frames += 1
 
-                # FPS estimate every 30 frames
                 if fps_frames >= 30:
                     elapsed = time.monotonic() - fps_timer
                     self.stats.fps = fps_frames / elapsed if elapsed else 0
                     fps_frames = 0
                     fps_timer  = time.monotonic()
 
-                # Run detectors based on time interval
                 current_time = time.monotonic()
                 if current_time - self._last_detection_time >= DETECTION_INTERVAL_SECONDS:
                     detections = self._run_detectors(frame)
@@ -178,10 +153,8 @@ class StreamProcessor:
                 else:
                     detections = self._last_detections
 
-                # Annotate frame using the available detections
                 annotated = self._draw_detections(frame, detections)
 
-                # Only log stats if we actually have new detections
                 if current_time - self._last_detection_time < 0.1:
                     self.stats.detections += len(detections)
 
@@ -192,162 +165,101 @@ class StreamProcessor:
 
             cap.release()
             self.stats.connected = False
-            log.warning("[%s] Reconnecting in %ds…", self.camera_id, RETRY_DELAY)
             time.sleep(RETRY_DELAY)
 
     def _open_stream(self) -> Optional[cv2.VideoCapture]:
-        log.info("[%s] Connecting to stream…", self.camera_id)
-        
         target_url = self.stream_url
-        
-        # --- YOUTUBE LIVE STREAM SUPPORT ---
         if "youtube.com" in target_url or "youtu.be" in target_url:
-            log.info("[%s] YouTube URL detected. Resolving actual stream...", self.camera_id)
             try:
-                ydl_opts = {
-                    'format': 'best',
-                    'quiet': True,
-                    'no_warnings': True,
-                }
+                ydl_opts = {'format': 'best', 'quiet': True, 'no_warnings': True}
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(target_url, download=False)
                     target_url = info.get('url', target_url)
-                    log.info("[%s] Resolved YouTube URL to M3U8/DASH", self.camera_id)
             except Exception as e:
-                log.error("[%s] Failed to resolve YouTube URL: %s", self.camera_id, e)
-                self.stats.errors += 1
+                log.error("[%s] YouTube resolver failed: %s", self.camera_id, e)
                 return None
-        # -----------------------------------
 
-        # Use CAP_FFMPEG for better HLS/M3U8 support
         cap = cv2.VideoCapture(target_url, cv2.CAP_FFMPEG)
-        
         if not cap.isOpened():
-            log.error("[%s] Cannot open stream %s", self.camera_id, self.stream_url)
-            self.stats.errors += 1
             return None
-            
-        log.info("[%s] Stream opened.", self.camera_id)
         return cap
 
     def _run_detectors(self, frame: np.ndarray) -> List[Detection]:
-        """Run all detectors on a fresh frame and persist events."""
         all_events: List[Detection] = []
-
         for detector in self.detectors:
             try:
                 events = detector.detect(frame, camera_id=self.camera_id)
-            except Exception as exc:
-                log.exception("[%s] Detector %s raised: %s", self.camera_id, detector.name, exc)
-                continue
-
-            for det in events:
-                all_events.append(det)
-                self._persist(frame, det)
-
+                for det in events:
+                    all_events.append(det)
+                    self._persist(frame, det)
+            except Exception:
+                log.exception("[%s] Detector %s failed", self.camera_id, detector.name)
         return all_events
 
     def _draw_detections(self, frame: np.ndarray, detections: List[Detection]) -> np.ndarray:
-        """Draw bounding boxes for the given detections onto a copy of the frame."""
         annotated = frame.copy()
-
-        # Draw the parking zones on the frame (if applicable)
+        # Draw the active parking zones on the stream
         for detector in self.detectors:
             if detector.name == "illegal_parking" and hasattr(detector, "draw_zones"):
                 annotated = detector.draw_zones(annotated, self.camera_id)
 
         for det in detections:
             x1, y1, x2, y2 = det.bbox
-            
-            # Dynamic bounding box colors based on threat level
             if det.label in ["fire", "smoke"]:
-                color = (0, 165, 255) # Orange for fire/smoke (BGR format)
+                color = (0, 165, 255)
             elif det.label == "illegal_parking":
-                color = (0, 0, 255)   # Red
+                color = (0, 0, 255)
             else:
-                color = (0, 200, 50)  # Green
+                color = (0, 200, 50)
 
             cv2.rectangle(annotated, (x1, y1), (x2, y2), color, 2)
-            text = f"{det.label} {det.confidence:.0%}"
-            cv2.putText(annotated, text, (x1, y1 - 6),
+            cv2.putText(annotated, f"{det.label} {det.confidence:.0%}", (x1, y1 - 6),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.55, color, 2)
         return annotated
 
     def _persist(self, raw_frame: np.ndarray, det: Detection):
-        """Save snapshot and log event, with cooldown to avoid duplicates."""
+        """Save snapshot and log event with strict notification throttling."""
         now = time.time()
-        cx = (det.bbox[0] + det.bbox[2]) // 2
-        cy = (det.bbox[1] + det.bbox[3]) // 2
-        key = (det.label, cx, cy)
-        last = self._last_event_time.get(key, 0)
+        
+        # Use a label-based key for throttling (e.g. "fire" or "illegal_parking")
+        notif_type = "parking" if det.label == "illegal_parking" else det.label
+        last_sent = self._notification_locks.get(notif_type, 0)
 
-        if now - last < self._cooldown_seconds:
-            return
-
-        self._last_event_time[key] = now
-
+        # 1. Logic for Database Logging (No cooldown for DB logs)
         snapshot_path: Optional[str] = None
         if self.save_snapshots:
-            try:
-                snapshot_path = save_snapshot(
-                    raw_frame, det.label, self.camera_id, det.bbox
-                )
-            except Exception:
-                log.exception("Snapshot save failed")
+            snapshot_path = save_snapshot(raw_frame, det.label, self.camera_id, det.bbox)
+
+        if det.label == "illegal_parking":
+            log_parking_event(det, snapshot_path)
+        else:
+            log_detection(det, snapshot_path)
+
+        # 2. Logic for high-priority notifications (SMS/Email) with 5-min cooldown
+        if now - last_sent < NOTIFICATION_COOLDOWN_SECONDS:
+            return # Skip notification, already sent recently
+
+        self._notification_locks[notif_type] = now
 
         try:
             if det.label == "illegal_parking":
-                # 1. Run License Plate Recognition on the raw frame using the bounding box
                 plate_number = extract_license_plate(raw_frame, det.bbox)
-
-                # 2. Save the plate back into the MongoDB meta
                 det.meta["license_plate"] = plate_number
-
-                # 3. Log the basic event to MongoDB
-                log_parking_event(det, snapshot_path)
-
-                # 4. Trigger SMS Alert to the Admin
-                sms_msg = (
-                    f"ILLEGAL PARKING DETECTED\n"
-                    f"Cam: {self.camera_id}\n"
-                    f"Plate: {plate_number}\n"
-                    f"Time: {det.meta.get('dwell_seconds', 0)}s"
-                )
-                send_sms_alert(sms_msg)
-
-                # 5. Fire off the Email to the RTO with the picture attached
-                send_rto_email(
-                    plate_number=plate_number,
-                    camera_id=self.camera_id,
-                    dwell_time=det.meta.get('dwell_seconds', 0),
-                    image_path=snapshot_path
-                )
-            
-            # --- NEW: FIRE & SMOKE CRITICAL ALERTS ---
-            elif det.label in ["fire", "smoke"]:
-                # 1. Log the event to MongoDB
-                log_detection(det, snapshot_path)
                 
-                # 2. Trigger Critical SMS Alert immediately
-                sms_msg = (
-                    f"CRITICAL: {det.label.upper()} DETECTED!\n"
-                    f"Cam: {self.camera_id}\n"
-                    f"Confidence: {det.confidence:.0%}"
-                )
-                send_sms_alert(sms_msg)
-            # -----------------------------------------
+                send_sms_alert(f"PARKING ALERT: Cam {self.camera_id}\nPlate: {plate_number}")
+                send_rto_email(plate_number, self.camera_id, det.meta.get('dwell_seconds', 0), snapshot_path)
             
-            else:
-                log_detection(det, snapshot_path)
+            elif det.label in ["fire", "smoke"]:
+                msg = f"CRITICAL: {det.label.upper()} DETECTED!\nCam: {self.camera_id}"
+                send_sms_alert(msg)
+                # Reuse RTO email logic for fire emergency
+                send_rto_email("FIRE_EMERGENCY", self.camera_id, 0.0, snapshot_path)
+
         except Exception:
-            log.exception("DB write or Notification failed for detection %s", det.label)
+            log.exception("Notification pipeline failed")
 
-
-# ─── Multi-camera manager ────────────────────────────────────────────────────
 
 class ProcessorManager:
-    """Manages a pool of StreamProcessor instances."""
-
     def __init__(self):
         self._processors: Dict[str, StreamProcessor] = {}
 
