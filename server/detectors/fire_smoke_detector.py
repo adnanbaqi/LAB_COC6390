@@ -27,7 +27,7 @@ class FireSmokeDetector(BaseDetector):
 
     def __init__(self, model_path: str = None):
         if model_path is None:
-            model_path = os.getenv("YOLO_MODEL", "yolov8x.pt")
+            model_path = os.getenv("FIRE_MODEL", "fire.pt")
             
         log.info("[%s] Loading YOLO model: %s with %.2f confidence threshold", 
                  self.name, model_path, CONFIDENCE_THRESHOLD)
