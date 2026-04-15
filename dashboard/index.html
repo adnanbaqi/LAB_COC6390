@@ -1,0 +1,2076 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CAMNET | Production Build</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap"
+        rel="stylesheet" />
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        :root {
+            --bg: #03050a;
+            --surface: #080d18;
+            --surface2: #0d1525;
+            --border: rgba(255, 255, 255, 0.06);
+            --border2: rgba(255, 255, 255, 0.12);
+            --cyan: #00ffe0;
+            --cyan-dim: rgba(0, 255, 224, 0.12);
+            --cyan-glow: rgba(0, 255, 224, 0.35);
+            --red: #ff3b6b;
+            --red-dim: rgba(255, 59, 107, 0.12);
+            --red-glow: rgba(255, 59, 107, 0.4);
+            --amber: #ffaa00;
+            --amber-dim: rgba(255, 170, 0, 0.12);
+            --text: #6b7fa3;
+            --text2: #9baac8;
+            --white: #e8edf8;
+            --mono: 'Space Mono', monospace;
+            --sans: 'Syne', sans-serif;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text2);
+            font-family: var(--sans);
+            min-height: 100vh;
+            display: grid;
+            grid-template-rows: auto 1fr;
+            overflow: hidden;
+        }
+
+        /* ─── SCANLINE OVERLAY ─── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.07) 2px, rgba(0, 0, 0, 0.07) 4px);
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        /* ─── HEADER ─── */
+        header {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            padding: 0 32px;
+            height: 56px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border2);
+            position: relative;
+            z-index: 10;
+        }
+
+        .logo {
+            font-family: var(--sans);
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--white);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-right: 24px;
+            border-right: 1px solid var(--border2);
+        }
+
+        .logo-icon {
+            width: 28px;
+            height: 28px;
+            background: var(--cyan);
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: hexpulse 3s ease-in-out infinite;
+        }
+
+        @keyframes hexpulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 var(--cyan-glow)
+            }
+
+            50% {
+                box-shadow: 0 0 20px 4px var(--cyan-glow)
+            }
+        }
+
+        .header-tabs {
+            display: flex;
+            align-items: stretch;
+            margin-left: 0;
+            height: 100%;
+        }
+
+        .header-tab {
+            font-family: var(--mono);
+            font-size: .68rem;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text);
+            border-right: 1px solid var(--border);
+            cursor: pointer;
+            transition: .2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+        }
+
+        .header-tab:hover,
+        .header-tab.active {
+            color: var(--white)
+        }
+
+        .header-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--cyan);
+            box-shadow: 0 0 8px var(--cyan-glow);
+        }
+
+        .header-tab .tab-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--border2);
+            transition: 0.3s;
+        }
+
+        .header-tab.active .tab-dot {
+            background: var(--cyan);
+            box-shadow: 0 0 6px var(--cyan)
+        }
+
+        .tab-dot.alert-dot {
+            background: var(--red) !important;
+            box-shadow: 0 0 8px var(--red-glow) !important;
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: .3
+            }
+        }
+
+        .header-right {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sys-badge {
+            font-family: var(--mono);
+            font-size: .65rem;
+            padding: 5px 12px;
+            border-radius: 3px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .badge-online {
+            background: var(--cyan-dim);
+            border: 1px solid var(--cyan);
+            color: var(--cyan);
+            box-shadow: 0 0 10px var(--cyan-glow) inset
+        }
+
+        .badge-offline {
+            background: var(--red-dim);
+            border: 1px solid var(--red);
+            color: var(--red)
+        }
+
+        .badge-error {
+            background: var(--amber-dim);
+            border: 1px solid var(--amber);
+            color: var(--amber)
+        }
+
+        .timestamp {
+            font-family: var(--mono);
+            font-size: .65rem;
+            color: var(--text);
+            padding-left: 12px;
+            border-left: 1px solid var(--border2)
+        }
+
+        /* ─── MAIN LAYOUT ─── */
+        main {
+            display: grid;
+            grid-template-columns: 240px 1fr 320px;
+            grid-template-rows: 1fr;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Module Placeholder Container */
+        #placeholder-workspace {
+            display: none;
+            grid-column: 1 / -1;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            background: var(--bg);
+            z-index: 50;
+            color: var(--text);
+            font-family: var(--mono);
+            text-align: center;
+        }
+
+        #placeholder-workspace h3 {
+            color: var(--white);
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+        }
+
+        /* ─── LEFT SIDEBAR ─── */
+        .left-sidebar {
+            background: var(--surface);
+            border-right: 1px solid var(--border2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-section {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-label {
+            font-family: var(--mono);
+            font-size: .6rem;
+            color: var(--text);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .sidebar-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border)
+        }
+
+        .sys-stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: .8rem;
+        }
+
+        .sys-stat:last-child {
+            border-bottom: none
+        }
+
+        .sys-stat .key {
+            color: var(--text);
+            font-size: .75rem
+        }
+
+        .sys-stat .val {
+            font-family: var(--mono);
+            font-size: .85rem;
+            font-weight: 700;
+            color: var(--cyan);
+        }
+
+        .sys-stat .val.warn {
+            color: var(--amber)
+        }
+
+        .sys-stat .val.danger {
+            color: var(--red)
+        }
+
+        .cam-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px
+        }
+
+        .cam-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: .15s;
+            border: 1px solid transparent;
+            margin-bottom: 4px;
+        }
+
+        .cam-item:hover {
+            background: var(--surface2);
+            border-color: var(--border)
+        }
+
+        .cam-item.selected {
+            background: var(--cyan-dim);
+            border-color: rgba(0, 255, 224, .3)
+        }
+
+        .cam-item .ci-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .ci-dot.live {
+            background: var(--cyan);
+            box-shadow: 0 0 6px var(--cyan);
+            animation: pulse 2s infinite
+        }
+
+        .ci-dot.offline {
+            background: var(--red)
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: .4
+            }
+        }
+
+        .cam-item .ci-info {
+            flex: 1;
+            min-width: 0
+        }
+
+        .cam-item .ci-id {
+            font-family: var(--mono);
+            font-size: .72rem;
+            color: var(--white);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .cam-item .ci-sub {
+            font-size: .65rem;
+            color: var(--text);
+            margin-top: 2px
+        }
+
+        .cam-item .ci-badge {
+            font-family: var(--mono);
+            font-size: .6rem;
+            padding: 2px 6px;
+            border-radius: 2px;
+            background: var(--red-dim);
+            border: 1px solid rgba(255, 59, 107, .3);
+            color: var(--red);
+            flex-shrink: 0;
+        }
+
+        /* ─── CENTER GRID ─── */
+        .feeds-area {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: var(--bg);
+        }
+
+        .feeds-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+            flex-shrink: 0;
+        }
+
+        .toolbar-label {
+            font-size: .72rem;
+            color: var(--text);
+            font-family: var(--mono);
+            text-transform: uppercase;
+            letter-spacing: 1px
+        }
+
+        .toolbar-sep {
+            width: 1px;
+            height: 20px;
+            background: var(--border2)
+        }
+
+        .grid-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            border: 1px solid var(--border2);
+            background: transparent;
+            color: var(--text);
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            transition: .15s;
+            font-size: .75rem;
+        }
+
+        .grid-btn:hover,
+        .grid-btn.active {
+            background: var(--cyan-dim);
+            border-color: var(--cyan);
+            color: var(--cyan)
+        }
+
+        .sort-sel {
+            font-family: var(--mono);
+            font-size: .65rem;
+            background: var(--surface2);
+            border: 1px solid var(--border2);
+            color: var(--text2);
+            padding: 5px 10px;
+            border-radius: 4px;
+            outline: none;
+            cursor: pointer;
+            margin-left: auto;
+        }
+
+        .feeds-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px
+        }
+
+        .feeds-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 14px;
+        }
+
+        .feeds-grid.cols-2 {
+            grid-template-columns: repeat(2, 1fr)
+        }
+
+        .feeds-grid.cols-1 {
+            grid-template-columns: 1fr
+        }
+
+        /* ─── FEED CARD ─── */
+        .feed-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: border-color .2s, transform .2s, box-shadow .2s;
+            position: relative;
+        }
+
+        .feed-card:hover {
+            border-color: rgba(0, 255, 224, .4);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0, 255, 224, .08);
+        }
+
+        .feed-card.has-alert {
+            border-color: rgba(255, 59, 107, .4);
+            box-shadow: 0 0 20px rgba(255, 59, 107, .08)
+        }
+
+        .feed-card.has-zone {
+            border-color: rgba(0, 255, 224, .25)
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 12px;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(180deg, rgba(255, 255, 255, .025) 0%, transparent 100%);
+        }
+
+        .card-header .ch-id {
+            font-family: var(--mono);
+            font-size: .72rem;
+            color: var(--white);
+            flex: 1
+        }
+
+        .card-header .ch-status {
+            font-family: var(--mono);
+            font-size: .6rem;
+            padding: 2px 7px;
+            border-radius: 2px;
+            text-transform: uppercase;
+        }
+
+        .status-live {
+            background: var(--cyan-dim);
+            border: 1px solid rgba(0, 255, 224, .3);
+            color: var(--cyan)
+        }
+
+        .status-off {
+            background: var(--red-dim);
+            border: 1px solid rgba(255, 59, 107, .3);
+            color: var(--red)
+        }
+
+        .card-img-wrap {
+            position: relative
+        }
+
+        .card-img-wrap img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+            background: #020408;
+        }
+
+        .card-zone-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .alert-flash {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--red);
+            color: #fff;
+            font-family: var(--mono);
+            font-size: .6rem;
+            padding: 3px 7px;
+            border-radius: 2px;
+            animation: blink 1s step-end infinite;
+            text-transform: uppercase;
+        }
+
+        .zone-indicator {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(0, 255, 224, .2);
+            border: 1px solid var(--cyan);
+            color: var(--cyan);
+            font-family: var(--mono);
+            font-size: .58rem;
+            padding: 2px 7px;
+            border-radius: 2px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card-footer {
+            display: flex;
+            gap: 4px;
+            padding: 8px 12px;
+        }
+
+        .card-meta {
+            flex: 1;
+            font-family: var(--mono);
+            font-size: .65rem;
+            background: rgba(0, 0, 0, .3);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 4px 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+
+        .card-meta .mk {
+            color: var(--text);
+            font-size: .58rem;
+            text-transform: uppercase
+        }
+
+        .card-meta .mv {
+            color: var(--text2);
+            font-weight: 700
+        }
+
+        .card-meta .mv.hi {
+            color: var(--cyan)
+        }
+
+        .card-meta .mv.warn {
+            color: var(--amber)
+        }
+
+        /* ─── RIGHT SIDEBAR ─── */
+        .right-sidebar {
+            background: var(--surface);
+            border-left: 1px solid var(--border2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .rs-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border2);
+            flex-shrink: 0;
+        }
+
+        .rs-tab {
+            flex: 1;
+            padding: 12px;
+            font-family: var(--mono);
+            font-size: .63rem;
+            text-align: center;
+            color: var(--text);
+            cursor: pointer;
+            transition: .15s;
+            border-right: 1px solid var(--border);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+        }
+
+        .rs-tab:last-child {
+            border-right: none
+        }
+
+        .rs-tab:hover {
+            color: var(--white)
+        }
+
+        .rs-tab.active {
+            color: var(--cyan)
+        }
+
+        .rs-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--cyan);
+            box-shadow: 0 0 6px var(--cyan);
+        }
+
+        .rs-tab .tab-count {
+            display: inline-block;
+            background: var(--red-dim);
+            border: 1px solid rgba(255, 59, 107, .4);
+            color: var(--red);
+            font-size: .55rem;
+            padding: 1px 5px;
+            border-radius: 2px;
+            margin-left: 4px;
+        }
+
+        .rs-content {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column
+        }
+
+        .rs-panel {
+            padding: 16px;
+            flex: 1
+        }
+
+        /* Stats panel */
+        .stat-block {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+        }
+
+        .stat-block-label {
+            font-family: var(--mono);
+            font-size: .6rem;
+            color: var(--text);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 10px;
+        }
+
+        .stat-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .stat-bar-row:last-child {
+            margin-bottom: 0
+        }
+
+        .bar-label {
+            font-size: .72rem;
+            color: var(--text2);
+            min-width: 90px;
+            flex-shrink: 0;
+            text-transform: capitalize
+        }
+
+        .bar-track {
+            flex: 1;
+            height: 4px;
+            background: rgba(255, 255, 255, .06);
+            border-radius: 2px;
+            overflow: hidden
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 2px;
+            background: var(--cyan);
+            box-shadow: 0 0 6px var(--cyan-glow);
+            transition: width .5s ease
+        }
+
+        .bar-val {
+            font-family: var(--mono);
+            font-size: .68rem;
+            color: var(--cyan);
+            min-width: 30px;
+            text-align: right
+        }
+
+        .big-stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 16px
+        }
+
+        .big-stat {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 14px;
+            text-align: center;
+        }
+
+        .big-stat .bs-val {
+            font-family: var(--mono);
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--white);
+            line-height: 1
+        }
+
+        .big-stat .bs-label {
+            font-size: .62rem;
+            color: var(--text);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 6px
+        }
+
+        /* Events panel */
+        .event-entry {
+            display: flex;
+            gap: 10px;
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            transition: .15s;
+        }
+
+        .event-entry:hover {
+            background: var(--surface2)
+        }
+
+        .event-entry:last-child {
+            border-bottom: none
+        }
+
+        .ev-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            background: var(--red-dim);
+            border: 1px solid rgba(255, 59, 107, .3);
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+            color: var(--red);
+            font-size: .85rem;
+        }
+
+        .ev-body {
+            flex: 1;
+            min-width: 0
+        }
+
+        .ev-title {
+            font-family: var(--mono);
+            font-size: .68rem;
+            color: var(--white);
+            margin-bottom: 3px
+        }
+
+        .ev-detail {
+            font-size: .7rem;
+            color: var(--text);
+            line-height: 1.4
+        }
+
+        .ev-plate {
+            display: inline-block;
+            background: rgba(0, 0, 0, .5);
+            border: 1px solid var(--border2);
+            font-family: var(--mono);
+            font-size: .65rem;
+            color: var(--amber);
+            padding: 1px 6px;
+            border-radius: 3px;
+            margin-top: 4px;
+            letter-spacing: 1px;
+        }
+
+        .ev-time {
+            font-family: var(--mono);
+            font-size: .6rem;
+            color: var(--text);
+            margin-top: 4px
+        }
+
+        .no-events {
+            padding: 40px 20px;
+            text-align: center;
+            font-size: .8rem;
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .no-events::before {
+            content: '✓';
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--cyan-dim);
+            border: 1px solid var(--cyan);
+            display: grid;
+            place-items: center;
+            color: var(--cyan);
+            font-size: 1rem;
+        }
+
+        /* ─── MODAL ─── */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(3, 5, 10, .92);
+            backdrop-filter: blur(12px);
+            display: none;
+            place-items: center;
+            z-index: 200;
+            padding: 32px;
+        }
+
+        .modal-backdrop.active {
+            display: grid
+        }
+
+        .modal-box {
+            background: var(--surface);
+            border: 1px solid var(--border2);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 1400px;
+            max-height: 90vh;
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            overflow: hidden;
+            box-shadow: 0 32px 80px rgba(0, 255, 224, .06), 0 0 0 1px rgba(0, 255, 224, .05);
+        }
+
+        .modal-main {
+            display: flex;
+            flex-direction: column;
+            background: #000;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .modal-topbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border2);
+            flex-shrink: 0;
+            z-index: 2;
+        }
+
+        .modal-cam-id {
+            font-family: var(--mono);
+            font-size: .85rem;
+            font-weight: 700;
+            color: var(--white);
+            flex: 1
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            background: transparent;
+            border: 1px solid var(--border2);
+            color: var(--text);
+            cursor: pointer;
+            display: grid;
+            place-items: center;
+            font-size: 1rem;
+            transition: .2s;
+        }
+
+        .modal-close:hover {
+            background: var(--red-dim);
+            border-color: var(--red);
+            color: var(--red);
+            transform: rotate(90deg)
+        }
+
+        .modal-feed-wrap {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-feed-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        #zone-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #zone-canvas.drawing {
+            pointer-events: auto;
+            cursor: crosshair
+        }
+
+        .draw-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, .5);
+            display: none;
+            place-items: center;
+            z-index: 5;
+            font-family: var(--mono);
+            font-size: .8rem;
+            color: var(--cyan);
+            text-align: center;
+            gap: 8px;
+            flex-direction: column;
+            pointer-events: none;
+        }
+
+        .draw-overlay.show {
+            display: flex
+        }
+
+        .draw-overlay span {
+            opacity: .6;
+            font-size: .65rem
+        }
+
+        .modal-bottombar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: var(--surface);
+            border-top: 1px solid var(--border2);
+            flex-shrink: 0;
+        }
+
+        .modal-metric {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-family: var(--mono);
+            font-size: .65rem;
+        }
+
+        .modal-metric .mm-k {
+            color: var(--text);
+            margin-right: 2px
+        }
+
+        .modal-metric .mm-v {
+            color: var(--white);
+            font-weight: 700
+        }
+
+        .modal-metric.hi .mm-v {
+            color: var(--cyan)
+        }
+
+        .modal-right {
+            border-left: 1px solid var(--border2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: var(--surface);
+        }
+
+        .modal-section {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-section:last-child {
+            border-bottom: none;
+            flex: 1;
+            overflow-y: auto
+        }
+
+        .ms-title {
+            font-family: var(--mono);
+            font-size: .65rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ms-title::before {
+            content: '';
+            width: 3px;
+            height: 12px;
+            background: var(--cyan);
+            border-radius: 1px
+        }
+
+        .zone-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px
+        }
+
+        .zone-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 5px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            font-family: var(--mono);
+            font-size: .68rem;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .zone-status.has-zone {
+            border-color: rgba(0, 255, 224, .3);
+            color: var(--cyan);
+            background: var(--cyan-dim)
+        }
+
+        .zone-status.no-zone {
+            border-color: var(--border)
+        }
+
+        .zone-status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--text);
+            flex-shrink: 0
+        }
+
+        .zone-status.has-zone .zone-status-dot {
+            background: var(--cyan);
+            box-shadow: 0 0 6px var(--cyan)
+        }
+
+        .btn-draw-zone {
+            width: 100%;
+            padding: 10px;
+            background: var(--cyan-dim);
+            border: 1px solid var(--cyan);
+            color: var(--cyan);
+            border-radius: 5px;
+            font-family: var(--mono);
+            font-size: .7rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: .2s;
+        }
+
+        .btn-draw-zone:hover {
+            background: var(--cyan);
+            color: #000;
+            box-shadow: 0 0 16px var(--cyan-glow)
+        }
+
+        .btn-draw-zone.saving {
+            background: var(--cyan);
+            color: #000
+        }
+
+        .btn-draw-zone.cancel {
+            background: var(--red-dim);
+            border-color: var(--red);
+            color: var(--red)
+        }
+
+        .btn-draw-zone.cancel:hover {
+            background: var(--red);
+            color: #fff
+        }
+
+        .btn-clear {
+            width: 100%;
+            padding: 8px;
+            background: transparent;
+            border: 1px solid var(--border2);
+            color: var(--text);
+            border-radius: 5px;
+            font-family: var(--mono);
+            font-size: .65rem;
+            cursor: pointer;
+            transition: .15s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-clear:hover {
+            border-color: var(--red);
+            color: var(--red)
+        }
+
+        .mini-stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 9px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: .78rem;
+        }
+
+        .mini-stat-row:last-child {
+            border-bottom: none
+        }
+
+        .msr-k {
+            color: var(--text)
+        }
+
+        .msr-v {
+            font-family: var(--mono);
+            color: var(--cyan);
+            font-weight: 700
+        }
+
+        .hint {
+            font-size: .68rem;
+            color: var(--text);
+            line-height: 1.5;
+            margin-bottom: 10px
+        }
+
+        /* ─── RESPONSIVE ─── */
+        @media(max-width:1100px) {
+            main {
+                grid-template-columns: 1fr 280px
+            }
+
+            .left-sidebar {
+                display: none
+            }
+
+            .modal-box {
+                grid-template-columns: 1fr;
+                grid-template-rows: 55vh 1fr;
+                max-height: 95vh
+            }
+
+            .modal-right {
+                border-left: none;
+                border-top: 1px solid var(--border2)
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="logo">
+            <div class="logo-icon"></div>
+            CAMNET
+        </div>
+        <div class="header-tabs">
+            <div class="header-tab active" onclick="switchMainTab('live', this)"><span
+                    class="tab-dot active"></span>Live Feeds</div>
+            <div class="header-tab" onclick="switchMainTab('analytics', this)"><span class="tab-dot"></span>Analytics
+            </div>
+            <div class="header-tab" onclick="switchMainTab('alerts', this)">
+                <span class="tab-dot" id="alert-tab-dot"></span>Alerts
+                <span id="alert-tab-count" style="font-size:.6rem;color:var(--red);margin-left:4px"></span>
+            </div>
+            <div class="header-tab" onclick="switchMainTab('config', this)"><span class="tab-dot"></span>Config</div>
+        </div>
+        <div class="header-right">
+            <span class="sys-badge badge-online" id="live-count">— / — ONLINE</span>
+            <span class="timestamp" id="sys-clock">--:--:--</span>
+        </div>
+    </header>
+
+    <main>
+        <div id="placeholder-workspace">
+            <h3 id="ph-title">MODULE</h3>
+            <p style="opacity: 0.6;">This module is under construction or currently offline.</p>
+        </div>
+
+        <div class="left-sidebar main-view-element">
+            <div class="sidebar-section">
+                <div class="sidebar-label">System</div>
+                <div class="sys-stat"><span class="key">Active Nodes</span><span class="val" id="ss-active">—</span>
+                </div>
+                <div class="sys-stat"><span class="key">Total Detections</span><span class="val"
+                        id="ss-detections">—</span></div>
+                <div class="sys-stat"><span class="key">Active Zones</span><span class="val" id="ss-zones">—</span>
+                </div>
+                <div class="sys-stat"><span class="key">Open Alerts</span><span class="val danger"
+                        id="ss-alerts">—</span></div>
+            </div>
+            <div class="sidebar-section"
+                style="flex:1;overflow:hidden;display:flex;flex-direction:column;padding-bottom:0">
+                <div class="sidebar-label">Camera Nodes</div>
+                <div class="cam-list" id="cam-list"></div>
+            </div>
+        </div>
+
+        <div class="feeds-area main-view-element">
+            <div class="feeds-toolbar">
+                <span class="toolbar-label">Live Grid</span>
+                <div class="toolbar-sep"></div>
+                <button class="grid-btn active" title="Auto" onclick="setGrid('auto',this)">⊞</button>
+                <button class="grid-btn" title="2 col" onclick="setGrid('cols-2',this)">▦</button>
+                <button class="grid-btn" title="1 col" onclick="setGrid('cols-1',this)">▬</button>
+                <select class="sort-sel" onchange="setSortMode(this.value)">
+                    <option value="default">Sort: Default</option>
+                    <option value="alerts">Sort: Alerts First</option>
+                    <option value="fps">Sort: FPS High</option>
+                    <option value="det">Sort: Detections</option>
+                </select>
+            </div>
+            <div class="feeds-scroll">
+                <div class="feeds-grid" id="feeds-grid">
+                    <div id="loading-overlay"
+                        style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text);font-family:var(--mono);font-size:.8rem">
+                        Connecting to cluster...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-sidebar main-view-element">
+            <div class="rs-tabs">
+                <div class="rs-tab active" onclick="switchRsTab('stats',this)">Stats</div>
+                <div class="rs-tab" onclick="switchRsTab('alerts',this)">
+                    Alerts <span class="tab-count" id="alert-badge" style="display:none">0</span>
+                </div>
+            </div>
+            <div class="rs-content">
+                <div class="rs-panel" id="rs-stats">
+                    <div class="big-stat-grid" id="big-stats">
+                        <div class="big-stat">
+                            <div class="bs-val" id="bsv-total">0</div>
+                            <div class="bs-label">Total Detections</div>
+                        </div>
+                        <div class="big-stat">
+                            <div class="bs-val" id="bsv-nodes">0</div>
+                            <div class="bs-label">Nodes Online</div>
+                        </div>
+                        <div class="big-stat">
+                            <div class="bs-val" id="bsv-zones">0</div>
+                            <div class="bs-label">Active Zones</div>
+                        </div>
+                        <div class="big-stat">
+                            <div class="bs-val" id="bsv-infractions" style="color:var(--red)">0</div>
+                            <div class="bs-label">Infractions</div>
+                        </div>
+                    </div>
+                    <div class="stat-block">
+                        <div class="stat-block-label">Detection Breakdown</div>
+                        <div id="detection-bars">
+                            <div style="color:var(--text);font-size:.75rem;text-align:center;padding:20px 0">Fetching...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="rs-panel" id="rs-alerts" style="display:none;padding:0">
+                    <div id="events-list">
+                        <div class="no-events">No active infractions</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal-backdrop" id="cam-modal" onclick="handleBackdropClick(event)">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div class="modal-main">
+                <div class="modal-topbar">
+                    <span class="dot" id="modal-dot"
+                        style="width:8px;height:8px;border-radius:50%;flex-shrink:0"></span>
+                    <span class="modal-cam-id" id="modal-cam-id">—</span>
+                    <button class="modal-close" onclick="closeModal()">✕</button>
+                </div>
+                <div class="modal-feed-wrap">
+                    <img id="modal-img" src="" alt="Feed" />
+                    <canvas id="zone-canvas"></canvas>
+                    <div class="draw-overlay" id="draw-overlay">
+                        ✦ ZONE DRAW MODE
+                        <span>Click to place vertices · 3+ points to save</span>
+                    </div>
+                </div>
+                <div class="modal-bottombar">
+                    <div class="modal-metric"><span class="mm-k">FPS</span><span class="mm-v hi" id="m-fps">—</span>
+                    </div>
+                    <div class="modal-metric"><span class="mm-k">DETECTIONS</span><span class="mm-v" id="m-det">—</span>
+                    </div>
+                    <div class="modal-metric"><span class="mm-k">PACKET DROPS</span><span class="mm-v"
+                            id="m-err">—</span></div>
+                    <div class="modal-metric" id="m-zone-badge" style="display:none"><span class="mm-k">ZONE</span><span
+                            class="mm-v" style="color:var(--cyan)">ACTIVE</span></div>
+                </div>
+            </div>
+            <div class="modal-right">
+                <div class="modal-section">
+                    <div class="ms-title">Zone Configuration</div>
+                    <p class="hint">Draw a polygon on the feed to define a restricted parking zone. Zone persists across
+                        sessions.</p>
+                    <div class="zone-status no-zone" id="zone-status">
+                        <span class="zone-status-dot"></span>
+                        <span id="zone-status-text">No zone defined</span>
+                    </div>
+                    <div class="zone-actions">
+                        <button class="btn-draw-zone" id="btn-draw" onclick="toggleDraw()">Draw Zone</button>
+                        <button class="btn-clear" id="btn-clear" onclick="clearZone()" style="display:none">Clear
+                            Zone</button>
+                    </div>
+                </div>
+                <div class="modal-section">
+                    <div class="ms-title">Node Telemetry</div>
+                    <div id="modal-hist">
+                        <div style="color:var(--text);font-size:.75rem;text-align:center;padding:20px 0">No data yet
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = "";
+        let isApiFailing = false;
+
+        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           STATE
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        let cameras = [];
+        let activeModalId = null;
+        let gridMode = 'auto';
+        let sortMode = 'default';
+        let alertCount = 0;
+
+        const savedZones = JSON.parse(localStorage.getItem('camnet_zones') || '{}');
+        let isDrawMode = false;
+        let draftPts = [];
+
+        const canvas = document.getElementById('zone-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 640;
+        canvas.height = 480;
+
+        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           CLOCK
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        function updateClock() {
+            document.getElementById('sys-clock').textContent = new Date().toLocaleTimeString('en-GB', { hour12: false });
+        }
+        setInterval(updateClock, 1000); updateClock();
+
+        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           TAB UI & VIEW SWITCHING
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        function switchMainTab(tabName, el) {
+            // Update Active Header Styles
+            document.querySelectorAll('.header-tab').forEach(t => {
+                t.classList.remove('active');
+                const dot = t.querySelector('.tab-dot');
+                if (dot && !dot.classList.contains('alert-dot')) dot.classList.remove('active');
+            });
+            el.classList.add('active');
+            const clickedDot = el.querySelector('.tab-dot');
+            if (clickedDot) clickedDot.classList.add('active');
+
+            // Toggle Workspace views
+            const mainElements = document.querySelectorAll('.main-view-element');
+            const placeholder = document.getElementById('placeholder-workspace');
+
+            if (tabName === 'live') {
+                mainElements.forEach(el => el.style.display = ''); // reset to stylesheet default
+                placeholder.style.display = 'none';
+            } else {
+                mainElements.forEach(el => el.style.display = 'none');
+                placeholder.style.display = 'flex';
+                document.getElementById('ph-title').textContent = `${tabName.toUpperCase()} MODULE`;
+            }
+        }
+
+        function switchRsTab(tab, el) {
+            document.querySelectorAll('.rs-tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById('rs-stats').style.display = tab === 'stats' ? '' : 'none';
+            document.getElementById('rs-alerts').style.display = tab === 'alerts' ? '' : 'none';
+        }
+
+        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           GRID CONTROLS
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        function setGrid(mode, btn) {
+            gridMode = mode;
+            document.querySelectorAll('.grid-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const g = document.getElementById('feeds-grid');
+            g.className = 'feeds-grid';
+            if (mode !== 'auto') g.classList.add(mode);
+            setTimeout(redrawAllCardZones, 100);
+        }
+        function setSortMode(v) { sortMode = v; renderGrid() }
+
+        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           FETCH & RENDER
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        async function fetchCameras() {
+            try {
+                const r = await fetch(`${API}/api/cameras`);
+                if (!r.ok) throw new Error('Network response was not ok');
+                const data = await r.json();
+                cameras = data;
+                isApiFailing = false;
+
+                updateLiveBadge();
+                renderGrid();
+                renderCamList();
+                updateBigStats();
+
+                if (activeModalId) {
+                    const cam = cameras.find(c => c.camera_id === activeModalId);
+                    if (cam) populateModal(cam);
+                }
+            } catch (error) {
+                console.error("Failed to fetch cameras:", error);
+                if (!isApiFailing) handleApiError();
+            }
+        }
+
+        async function fetchStats() {
+            try {
+                const r = await fetch(`${API}/api/stats`);
+                if (!r.ok) throw new Error('API Error');
+                const data = await r.json();
+                renderStatBars(data);
+                if (data.total) document.getElementById('bsv-total').textContent = data.total;
+            } catch (error) {
+                console.error("Failed to fetch general stats");
+            }
+
+            if (activeModalId) {
+                try {
+                    const r = await fetch(`${API}/api/stats?camera_id=${activeModalId}`);
+                    if (!r.ok) throw new Error('API Error');
+                    const data = await r.json();
+                    renderModalHist(data);
+                } catch (error) {
+                    console.error("Failed to fetch modal stats");
+                }
+            }
+        }
+
+        async function fetchEvents() {
+            try {
+                const r = await fetch(`${API}/api/parking/events?resolved=false&limit=30`);
+                if (!r.ok) throw new Error('API Error');
+                const events = await r.json();
+                renderEvents(events);
+            } catch (error) {
+                console.error("Failed to fetch events");
+            }
+        }
+
+        function handleApiError() {
+            isApiFailing = true;
+            const badge = document.getElementById('live-count');
+            badge.textContent = "API DISCONNECTED";
+            badge.className = 'sys-badge badge-error';
+
+            // Clean up grid loader if api is fully unreachable
+            const loader = document.getElementById('loading-overlay');
+            if (loader) {
+                loader.innerHTML = "Unable to connect to Cluster API.<br/><span style='opacity:0.5'>Check network or backend status.</span>";
+            }
+        }
+
+        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           BADGE / HEADER
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        function updateLiveBadge() {
+            if (isApiFailing) return;
+            const online = cameras.filter(c => c.connected).length;
+            const badge = document.getElementById('live-count');
+            badge.textContent = `${online} / ${cameras.length} ONLINE`;
+            badge.className = `sys-badge ${online === 0 ? 'badge-offline' : 'badge-online'}`;
+            document.getElementById('bsv-nodes').textContent = online;
+            document.getElementById('ss-active').textContent = `${online}/${cameras.length}`;
+            const zc = Object.keys(savedZones).length;
+            document.getElementById('ss-zones').textContent = zc;
+            document.getElementById('bsv-zones').textContent = zc;
+        }
+
+        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           CAMERA LIST (LEFT SIDEBAR)
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        function renderCamList() {
+            const el = document.getElementById('cam-list');
+            if (!cameras.length) {
+                if (!isApiFailing) el.innerHTML = '<div style="padding:20px;font-size:.75rem;color:var(--text)">No nodes detected</div>';
+                return;
+            }
+            el.innerHTML = cameras.map(c => `
+                <div class="cam-item ${activeModalId === c.camera_id ? 'selected' : ''}" onclick="openModal('${c.camera_id}')">
+                <span class="ci-dot ${c.connected ? 'live' : 'offline'}"></span>
+                <div class="ci-info">
+                    <div class="ci-id">${c.camera_id}</div>
+                    <div class="ci-sub">FPS:${c.fps} DET:${c.detections}</div>
+                </div>
+                ${c.detections > 0 ? `<span class="ci-badge">${c.detections}</span>` : ''}
+                </div>
+            `).join('');
+        }
+
+        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           FEED GRID
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        function getSortedCameras() {
+            const arr = [...cameras];
+            if (sortMode === 'alerts') arr.sort((a, b) => b.detections - a.detections);
+            else if (sortMode === 'fps') arr.sort((a, b) => b.fps - a.fps);
+            else if (sortMode === 'det') arr.sort((a, b) => b.detections - a.detections);
+            return arr;
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('feeds-grid');
+            const sorted = getSortedCameras();
+
+            const loader = document.getElementById('loading-overlay');
+            if (loader && sorted.length > 0) loader.remove();
+
+            if (!sorted.length && !isApiFailing && !loader) {
+                grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text);font-family:var(--mono);font-size:.8rem">No camera nodes registered.</p>';
+                return;
+            }
+
+            const existingIds = new Set([...grid.querySelectorAll('.feed-card')].map(c => c.dataset.camid));
+            const incomingIds = new Set(sorted.map(c => c.camera_id));
+
+            // Remove stale
+            existingIds.forEach(id => {
+                if (!incomingIds.has(id)) document.getElementById(`card-${id}`)?.remove();
+            });
+
+            sorted.forEach((cam) => {
+                const existing = document.getElementById(`card-${cam.camera_id}`);
+                const hasZone = !!savedZones[cam.camera_id];
+                const hasAlert = cam.detections > 0;
+
+                if (!existing) {
+                    const div = document.createElement('div');
+                    div.className = `feed-card ${hasAlert ? 'has-alert' : ''} ${hasZone ? 'has-zone' : ''}`;
+                    div.id = `card-${cam.camera_id}`;
+                    div.dataset.camid = cam.camera_id;
+                    div.onclick = () => openModal(cam.camera_id);
+                    div.innerHTML = `
+                        <div class="card-header">
+                        <span class="ci-dot ${cam.connected ? 'live' : 'offline'}" style="width:7px;height:7px;border-radius:50%;flex-shrink:0"></span>
+                        <span class="ch-id">${cam.camera_id}</span>
+                        <span class="ch-status ${cam.connected ? 'status-live' : 'status-off'}">${cam.connected ? 'LIVE' : 'OFF'}</span>
+                        </div>
+                        <div class="card-img-wrap">
+                        <img src="${API}/api/cameras/${cam.camera_id}/feed" alt="${cam.camera_id}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22200%22><rect width=%22400%22 height=%22200%22 fill=%22%23020408%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23ff3b6b%22 font-family=%22monospace%22 font-size=%2214%22>SIGNAL LOST</text></svg>'"/>
+                        <canvas class="card-zone-canvas" id="zc-${cam.camera_id}"></canvas>
+                        ${hasAlert ? `<div class="alert-flash"></div>` : ''}
+                        ${hasZone ? `<div class="zone-indicator">⬡ ZONE</div>` : ''}
+                        </div>
+                        <div class="card-footer">
+                        <div class="card-meta"><span class="mk">FPS</span><span class="mv hi" id="cfps-${cam.camera_id}">${cam.fps}</span></div>
+                        <div class="card-meta"><span class="mk">DET</span><span class="mv ${hasAlert ? 'warn' : ''}" id="cdet-${cam.camera_id}">${cam.detections}</span></div>
+                        <div class="card-meta"><span class="mk">ERR</span><span class="mv" id="cerr-${cam.camera_id}">${cam.errors}</span></div>
+                        </div>
+                    `;
+                    grid.appendChild(div);
+                    if (hasZone) scheduleCardZoneDraw(cam.camera_id);
+                } else {
+                    // Update existing card properties
+                    const dot = existing.querySelector('.ci-dot');
+                    if (dot) dot.className = `ci-dot ${cam.connected ? 'live' : 'offline'}`;
+                    const st = existing.querySelector('.ch-status');
+                    if (st) { st.className = `ch-status ${cam.connected ? 'status-live' : 'status-off'}`; st.textContent = cam.connected ? 'LIVE' : 'OFF' }
+
+                    const el1 = document.getElementById(`cfps-${cam.camera_id}`);
+                    const el2 = document.getElementById(`cdet-${cam.camera_id}`);
+                    const el3 = document.getElementById(`cerr-${cam.camera_id}`);
+                    if (el1) el1.textContent = cam.fps;
+                    if (el2) { el2.textContent = cam.detections; el2.className = `mv ${cam.detections > 0 ? 'warn' : ''}` }
+                    if (el3) el3.textContent = cam.errors;
+
+                    existing.className = `feed-card ${hasAlert ? 'has-alert' : ''} ${hasZone ? 'has-zone' : ''}`;
+
+                    // Flash / Zone indicators toggle dynamically
+                    let flash = existing.querySelector('.alert-flash');
+                    if (hasAlert && !flash) existing.querySelector('.card-img-wrap').insertAdjacentHTML('beforeend', '<div class="alert-flash"></div>');
+                    else if (!hasAlert && flash) flash.remove();
+                }
+            });
+        }
+
+        function scheduleCardZoneDraw(camId) {
+            const img = document.querySelector(`#card-${camId} img`);
+            if (!img) return;
+            const draw = () => drawCardZone(camId);
+            if (img.complete) draw();
+            else img.addEventListener('load', draw, { once: true });
+        }
+
+        function drawCardZone(camId) {
+            const pts = savedZones[camId];
+            const cardCanvas = document.getElementById(`zc-${camId}`);
+            if (!cardCanvas || !pts || pts.length < 3) return;
+
+            const img = cardCanvas.previousElementSibling;
+            if (!img || !img.offsetWidth || !img.offsetHeight) return; // Prevent 0/0 canvas errors
+
+            cardCanvas.width = img.offsetWidth || 300;
+            cardCanvas.height = img.offsetHeight || 200;
+
+            const cctx = cardCanvas.getContext('2d');
+            cctx.clearRect(0, 0, cardCanvas.width, cardCanvas.height);
+
+            const sx = cardCanvas.width / 640;
+            const sy = cardCanvas.height / 480;
+
+            cctx.beginPath();
+            cctx.moveTo(pts[0][0] * sx, pts[0][1] * sy);
+            for (let i = 1; i < pts.length; i++) cctx.lineTo(pts[i][0] * sx, pts[i][1] * sy);
+            cctx.closePath();
+            cctx.fillStyle = 'rgba(255,59,107,0.18)';
+            cctx.fill();
+            cctx.strokeStyle = '#ff3b6b';
+            cctx.lineWidth = 1.5;
+            cctx.setLineDash([4, 3]);
+            cctx.stroke();
+            cctx.setLineDash([]);
+        }
+
+        function redrawAllCardZones() {
+            Object.keys(savedZones).forEach(drawCardZone);
+        }
+
+        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           STATS
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        function updateBigStats() {
+            const total = cameras.reduce((s, c) => s + (c.detections || 0), 0);
+            document.getElementById('bsv-total').textContent = total;
+            document.getElementById('ss-detections').textContent = total;
+        }
+
+        function renderStatBars(data) {
+            const el = document.getElementById('detection-bars');
+            if (!data || !data.total || !data.by_label) {
+                el.innerHTML = '<div style="color:var(--text);font-size:.75rem;text-align:center;padding:20px 0">No data</div>';
+                return;
+            }
+            const max = Math.max(...Object.values(data.by_label));
+            el.innerHTML = Object.entries(data.by_label).map(([k, v]) => `
+                <div class="stat-bar-row">
+                <span class="bar-label">${k.replace('_', ' ')}</span>
+                <div class="bar-track"><div class="bar-fill" style="width:${max ? Math.round(v / max * 100) : 0}%"></div></div>
+                <span class="bar-val">${v}</span>
+                </div>
+            `).join('');
+        }
+
+        function renderModalHist(data) {
+            const el = document.getElementById('modal-hist');
+            if (!data || !data.total || !data.by_label) {
+                el.innerHTML = '<div style="color:var(--text);font-size:.75rem;text-align:center;padding:20px 0">No history</div>';
+                return;
+            }
+            el.innerHTML = Object.entries(data.by_label).map(([k, v]) => `
+                <div class="mini-stat-row">
+                <span class="msr-k">${k.replace('_', ' ')}</span>
+                <span class="msr-v">${v}</span>
+                </div>
+            `).join('');
+        }
+
+        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           EVENTS & ALERTS
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        function renderEvents(events) {
+            alertCount = events.length;
+
+            // Dynamic Alert UI
+            const badge = document.getElementById('alert-badge');
+            const alertTabDot = document.getElementById('alert-tab-dot');
+            const alertTabCount = document.getElementById('alert-tab-count');
+
+            badge.textContent = alertCount;
+            badge.style.display = alertCount ? 'inline-block' : 'none';
+
+            if (alertCount > 0) {
+                alertTabDot.classList.add('alert-dot');
+                alertTabCount.textContent = `(${alertCount})`;
+            } else {
+                alertTabDot.classList.remove('alert-dot');
+                alertTabCount.textContent = '';
+            }
+
+            document.getElementById('ss-alerts').textContent = alertCount;
+            document.getElementById('bsv-infractions').textContent = alertCount;
+
+            const el = document.getElementById('events-list');
+            if (!events.length) {
+                el.innerHTML = '<div class="no-events">No active infractions</div>';
+                return;
+            }
+            el.innerHTML = events.map(e => `
+                <div class="event-entry">
+                <div class="ev-icon">⚠</div>
+                <div class="ev-body">
+                    <div class="ev-title">[${e.camera_id}] INFRACTION</div>
+                    <div class="ev-detail">Unauthorized ${e.meta?.vehicle_label || 'vehicle'} detected in restricted zone.</div>
+                    ${e.meta?.license_plate ? `<div class="ev-plate">${e.meta.license_plate}</div>` : ''}
+                    <div class="ev-time">${new Date(e.timestamp).toLocaleTimeString()}</div>
+                </div>
+                </div>
+            `).join('');
+        }
+
+        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           MODAL
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        function openModal(camId) {
+            const cam = cameras.find(c => c.camera_id === camId);
+            if (!cam) return;
+            activeModalId = camId;
+
+            document.getElementById('modal-img').src = `${API}/api/cameras/${camId}/feed`;
+            populateModal(cam);
+            cancelDraw();
+            renderModalZoneStatus();
+
+            requestAnimationFrame(() => {
+                if (savedZones[camId]) drawSavedZone(savedZones[camId]);
+                else clearCanvas();
+            });
+
+            document.getElementById('cam-modal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+            renderCamList();
+        }
+
+        function populateModal(cam) {
+            const online = cam.connected;
+            const dot = document.getElementById('modal-dot');
+            dot.className = `dot ${online ? 'live' : 'offline'}`;
+            dot.style.background = online ? 'var(--cyan)' : 'var(--red)';
+            dot.style.boxShadow = online ? '0 0 8px var(--cyan)' : '0 0 8px var(--red)';
+            document.getElementById('modal-cam-id').textContent = cam.camera_id;
+            document.getElementById('m-fps').textContent = cam.fps || '--';
+            document.getElementById('m-det').textContent = cam.detections || '0';
+            document.getElementById('m-err').textContent = cam.errors || '0';
+
+            const hasZone = !!savedZones[cam.camera_id];
+            const zoneBadge = document.getElementById('m-zone-badge');
+            zoneBadge.style.display = hasZone ? 'flex' : 'none';
+        }
+
+        function renderModalZoneStatus() {
+            const hasZone = activeModalId && savedZones[activeModalId];
+            const statusEl = document.getElementById('zone-status');
+            const statusText = document.getElementById('zone-status-text');
+            const clearBtn = document.getElementById('btn-clear');
+
+            if (hasZone) {
+                statusEl.className = 'zone-status has-zone';
+                statusText.textContent = `Zone active (${hasZone.length} pts)`;
+                clearBtn.style.display = 'block';
+            } else {
+                statusEl.className = 'zone-status no-zone';
+                statusText.textContent = 'No zone defined';
+                clearBtn.style.display = 'none';
+            }
+        }
+
+        function closeModal() {
+            activeModalId = null;
+            cancelDraw();
+            document.getElementById('cam-modal').classList.remove('active');
+            document.getElementById('modal-img').src = '';
+            document.body.style.overflow = '';
+            renderCamList();
+        }
+        function handleBackdropClick(e) { if (e.target === e.currentTarget) closeModal() }
+
+        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           ZONE DRAWING
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        function toggleDraw() {
+            if (!isDrawMode) startDraw();
+            else confirmSave();
+        }
+
+        function startDraw() {
+            isDrawMode = true;
+            draftPts = [];
+            canvas.classList.add('drawing');
+            document.getElementById('draw-overlay').classList.add('show');
+            const btn = document.getElementById('btn-draw');
+            btn.textContent = 'Save Zone';
+            btn.classList.add('saving');
+            clearCanvas();
+        }
+
+        function cancelDraw() {
+            if (!isDrawMode) return;
+            isDrawMode = false;
+            draftPts = [];
+            canvas.classList.remove('drawing');
+            document.getElementById('draw-overlay').classList.remove('show');
+            const btn = document.getElementById('btn-draw');
+            btn.textContent = 'Draw Zone';
+            btn.classList.remove('saving', 'cancel');
+
+            if (activeModalId && savedZones[activeModalId]) drawSavedZone(savedZones[activeModalId]);
+            else clearCanvas();
+        }
+
+        function confirmSave() {
+            if (draftPts.length < 3) { alert('Place at least 3 points to create a zone.'); return }
+            saveZone(draftPts);
+        }
+
+        async function clearZone() {
+            if (!activeModalId) return;
+            delete savedZones[activeModalId];
+            localStorage.setItem('camnet_zones', JSON.stringify(savedZones));
+            clearCanvas();
+            renderModalZoneStatus();
+            drawCardZone(activeModalId);
+
+            try {
+                await fetch(`${API}/api/cameras/${activeModalId}/zones`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ zones: [] })
+                });
+            } catch (e) { console.warn('Could not sync zone clearance to backend'); }
+        }
+
+        async function saveZone(pts) {
+            savedZones[activeModalId] = pts;
+            localStorage.setItem('camnet_zones', JSON.stringify(savedZones));
+
+            isDrawMode = false;
+            canvas.classList.remove('drawing');
+            document.getElementById('draw-overlay').classList.remove('show');
+            const btn = document.getElementById('btn-draw');
+            btn.textContent = 'Draw Zone';
+            btn.classList.remove('saving');
+            draftPts = [];
+
+            drawSavedZone(pts);
+            scheduleCardZoneDraw(activeModalId);
+            renderModalZoneStatus();
+            renderGrid();
+
+            try {
+                await fetch(`${API}/api/cameras/${activeModalId}/zones`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ zones: [pts] })
+                });
+            } catch (e) { console.warn('Could not sync zone save to backend'); }
+        }
+
+        function clearCanvas() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
+
+        function drawSavedZone(pts) {
+            clearCanvas();
+            if (!pts || pts.length < 2) return;
+            ctx.beginPath();
+            ctx.moveTo(pts[0][0], pts[0][1]);
+            for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(255,59,107,0.18)'; ctx.fill();
+            ctx.strokeStyle = '#ff3b6b'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]);
+
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            pts.forEach(p => { ctx.beginPath(); ctx.arc(p[0], p[1], 4, 0, Math.PI * 2); ctx.fill(); });
+        }
+
+        function drawDraftZone() {
+            clearCanvas();
+            if (!draftPts.length) return;
+
+            if (activeModalId && savedZones[activeModalId]) {
+                const sp = savedZones[activeModalId];
+                ctx.beginPath();
+                ctx.moveTo(sp[0][0], sp[0][1]);
+                for (let i = 1; i < sp.length; i++) ctx.lineTo(sp[i][0], sp[i][1]);
+                ctx.closePath();
+                ctx.strokeStyle = 'rgba(255,59,107,0.3)'; ctx.lineWidth = 1; ctx.setLineDash([3, 5]); ctx.stroke(); ctx.setLineDash([]);
+            }
+
+            ctx.beginPath();
+            ctx.moveTo(draftPts[0][0], draftPts[0][1]);
+            for (let i = 1; i < draftPts.length; i++) ctx.lineTo(draftPts[i][0], draftPts[i][1]);
+            if (draftPts.length > 2) {
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(0,255,224,0.15)'; ctx.fill();
+            }
+            ctx.strokeStyle = 'var(--cyan,#00ffe0)'; ctx.lineWidth = 2; ctx.stroke();
+
+            ctx.fillStyle = '#fff';
+            draftPts.forEach(p => { ctx.beginPath(); ctx.arc(p[0], p[1], 4, 0, Math.PI * 2); ctx.fill() });
+
+            if (draftPts.length > 2) {
+                ctx.beginPath(); ctx.arc(draftPts[0][0], draftPts[0][1], 7, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(0,255,224,.6)'; ctx.lineWidth = 1.5; ctx.stroke();
+            }
+        }
+
+        canvas.addEventListener('mousedown', function (e) {
+            if (!isDrawMode) return;
+            const rect = canvas.getBoundingClientRect();
+            // Prevent drawing errors if window resizes breaking ratio bounds
+            if (rect.width === 0 || rect.height === 0) return;
+
+            const sx = canvas.width / rect.width;
+            const sy = canvas.height / rect.height;
+            const x = Math.round((e.clientX - rect.left) * sx);
+            const y = Math.round((e.clientY - rect.top) * sy);
+            draftPts.push([x, y]);
+            drawDraftZone();
+        });
+
+        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           INIT
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        fetchCameras();
+        fetchStats();
+        fetchEvents();
+
+        setInterval(fetchCameras, 3000);
+        setInterval(fetchStats, 5000);
+        setInterval(fetchEvents, 8000);
+
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && activeModalId) closeModal() });
+        window.addEventListener('load', () => setTimeout(redrawAllCardZones, 500));
+        window.addEventListener('resize', () => { if (!activeModalId) setTimeout(redrawAllCardZones, 200) });
+    </script>
+</body>
+
+</html>

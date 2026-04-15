@@ -1,0 +1,7 @@
+/venv
+/test
+.vscode
+/snapshots
+.env
+yolov8x.pt
+pi_node
